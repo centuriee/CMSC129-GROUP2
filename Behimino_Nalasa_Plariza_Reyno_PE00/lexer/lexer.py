@@ -21,6 +21,7 @@ class Error:
 class Lexer:
     NUMBER = r"\d+\.?\d*|\.\d+"
     VARIABLE = r"[a-zA-Z_][a-zA-Z0-9_]*"
+    INVALID_VARIABLE_NAME = r"\d+[a-zA-Z_][a-zA-Z0-9_]*"
     OPERATOR = r"[+\-/*%]"
     ASSIGNMENT = r"="
     SKIP = r"[ \t]+"
@@ -37,6 +38,7 @@ class Lexer:
     def tokenize(self) -> list[Token]:
         token_spec = [
             ("VARIABLE", self.VARIABLE),
+            ("INVALID_VARIABLE_NAME", self.INVALID_VARIABLE_NAME),
             ("NUMBER", self.NUMBER),
             ("OPERATOR", self.OPERATOR),
             ("ASSIGNMENT", self.ASSIGNMENT),
@@ -46,29 +48,27 @@ class Lexer:
         get_token = re.compile(tok_regex).finditer
 
         tokens = []
-        pos = 0
 
         for match in get_token(self.text):
             kind = match.lastgroup
             value = match.group()
-            start, end = match.span()
 
-            # Skip whitespace
+            # skip whitespace
             if kind == "SKIP":
-                pos = end
                 continue
 
-            # Handle variable names
-            if kind == "VARIABLE":
+            if kind == "INVALID_VARIABLE":
+                tokens.append(Error("INVALID_VARIABLE_NAME", value))
+
+            # handle variable names
+            elif kind == "VARIABLE":
                 if value in self.KEYWORDS:
                     tokens.append(Error("RESERVED_KEYWORD", value))
                 else:
                     tokens.append(Token("VARIABLE", value))
 
-            # Handle other tokens
+            # handle other tokens
             else:
                 tokens.append(Token(kind, value))
-
-            pos = end
 
         return tokens
