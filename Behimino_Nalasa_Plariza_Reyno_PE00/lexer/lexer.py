@@ -53,21 +53,18 @@ class Lexer:
             kind = match.lastgroup
             value = match.group()
 
-            # skip whitespace
             if kind == "SKIP":
                 continue
 
-            if kind == "INVALID_VARIABLE":
+            if kind == "INVALID_VARIABLE_NAME":
                 tokens.append(Error("INVALID_VARIABLE_NAME", value))
 
-            # handle variable names
             elif kind == "VARIABLE":
                 if value in self.KEYWORDS:
                     tokens.append(Error("RESERVED_KEYWORD", value))
                 else:
                     tokens.append(Token("VARIABLE", value))
 
-            # handle other tokens
             else:
                 tokens.append(Token(kind, value))
 
