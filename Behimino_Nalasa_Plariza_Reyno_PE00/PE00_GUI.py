@@ -1,7 +1,7 @@
 import sys
 from PySide6.QtWidgets import (
     QApplication, QWidget, QTextEdit,
-    QPushButton, QHBoxLayout, QVBoxLayout
+    QPushButton, QHBoxLayout, QVBoxLayout, QFileDialog, QMessageBox
 )
 
 
@@ -16,6 +16,23 @@ def main_window():
     input_text.setPlaceholderText("Input Text Area")
 
     load_button = QPushButton("Load File") #Creates Button for load file
+
+    def load_file(): # Function to load an input file when load button is interacted
+        file_name, _ = QFileDialog.getOpenFileName(
+            window,
+            "Open Input File",
+            "",
+            "Input Files (*.in);;All Files (*)" #Filters files visible to be of .in extension
+        )
+        if file_name:  
+            if file_name.endswith(".in"): #
+                try:
+                    with open(file_name, "r", encoding="utf-8") as f: #Reads the file contents when selected
+                        lines = f.readlines()
+                        input_text.setPlainText("".join(lines))  #Displays file contents in the input text area
+                except Exception as e:
+                    QMessageBox.critical(window, "Error", f"Failed to load file:\n{e}") #Error trap when file is not loaded properly
+    load_button.clicked.connect(load_file)
 
     input_layout = QVBoxLayout() #Creates vertical box layout for the definition of input layout
     input_layout.addWidget(input_text)
@@ -40,12 +57,8 @@ def main_window():
     window.setLayout(main_layout)
     return window
 
-
 if __name__ == "__main__": #Creates the GUI application when program is run
     app = QApplication(sys.argv)
     win = main_window() #Displays the GUI window
     win.show()
     sys.exit(app.exec())
-
-
-
