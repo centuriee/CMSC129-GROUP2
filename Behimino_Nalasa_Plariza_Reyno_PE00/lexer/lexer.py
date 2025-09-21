@@ -16,8 +16,6 @@ class Error:
     def __repr__(self):
         return f"Error({self.type}, {self.value})"
 
-
-
 class Lexer:
     NUMBER = r"\d+\.?\d*|\.\d+"
     VARIABLE = r"[a-zA-Z_][a-zA-Z0-9_]*"
