@@ -1,12 +1,25 @@
 import re
 
 class Token:
-    def __init__(self, type_: str, value: str):
-        self.type = type_
-        self.value = value
+    # why does python have to be cringe like that man
+    # give me my lazy multiple constructors back
+    def __init__(self, *args, **kwargs):
+        if len(args) == 2:
+            self.type = args[0]
+            self.value = args[1]
+            self.name = None
+        elif len(args) == 3:
+            self.type = args[0]
+            self.name = args[1]
+            self.value = args[2]
+        else:
+            raise TypeError("Invalid number of arguments. Takes 2 or 3 only")
 
     def __repr__(self):
-        return f"Token({self.type}, {self.value})"
+        if self.name == None:
+            return f"Token({self.type}, {self.value})"
+        else:
+            return f"Token({self.type}, {self.name}, {self.value})"
     
 class Error:
     def __init__(self, type_: str, value: str):
@@ -61,7 +74,7 @@ class Lexer:
                 if value in self.KEYWORDS:
                     tokens.append(Error("RESERVED_KEYWORD", value))
                 else:
-                    tokens.append(Token("VARIABLE", value))
+                    tokens.append(Token("VARIABLE", value, None))
 
             else:
                 tokens.append(Token(kind, value))

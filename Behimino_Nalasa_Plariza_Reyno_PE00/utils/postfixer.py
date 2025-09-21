@@ -1,9 +1,14 @@
 def restring(token_stream):
     # takes incoming token stream and converts back to readable string
+    if token_stream is None:
+        return None
 
     token_values = []
     for token in token_stream:
-        token_values.append(token.value)
+        if token.type == "VARIABLE":
+            token_values.append(str(token.name))
+        else:
+            token_values.append(str(token.value))
 
     return ' '.join(token_values)
 
