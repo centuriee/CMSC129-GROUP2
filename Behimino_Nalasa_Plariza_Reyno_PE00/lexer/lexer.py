@@ -69,3 +69,4 @@ class Lexer:
                 tokens.append(Token(kind, value))
 
         return tokens
+
