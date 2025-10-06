@@ -1,4 +1,5 @@
 import sys
+import os
 from PySide6.QtWidgets import (
     QApplication, QWidget, QPushButton, QLabel, QTextEdit, 
     QTableWidget, QTableWidgetItem, QVBoxLayout, QHBoxLayout, 
@@ -8,122 +9,176 @@ from PySide6.QtCore import Qt
 
 
 def main_window():
-    # Create main GUI window
     window = QWidget()
     window.setWindowTitle("PE01 - Strings and DFA")
-    window.resize(800, 400)
+    window.resize(900, 450)
 
-    # Creates the display area for the transition table
+    # UI Components
     transition_label = QLabel("Transition Table")
-    transition_table = QTableWidget(0, 3)   # Start empty in rows with 3 columns fixed
-    transition_table.setHorizontalHeaderLabels(["State", "0", "1"]) # Labels for the colum headers
+    transition_table = QTableWidget(0, 3)
+    transition_table.setHorizontalHeaderLabels(["State", "0", "1"])
     transition_table.verticalHeader().setVisible(False)
     transition_table.setEditTriggers(QTableWidget.NoEditTriggers)
     transition_table.horizontalHeader().setStretchLastSection(True)
 
-    # Creates the display area for the input section
     input_label = QLabel("Input")
     input_text = QTextEdit()
     input_text.setPlaceholderText("Input strings will display here...")
     input_text.setReadOnly(True)
 
-    # Creates the display area for the output section
     output_label = QLabel("Output")
     output_text = QTextEdit()
     output_text.setPlaceholderText("Output results will display here...")
     output_text.setReadOnly(True)
 
-    # Status Display for Initial display of the application
     status_label = QLabel("STATUS: Waiting for input.")
     status_label.setStyleSheet("font-weight: bold;")
 
-    # Buttons utilized for the application
-    load_button = QPushButton("Load File") # Button operation for file loading
-    process_button = QPushButton("Process") # Button operation for file processing
-    process_button.setEnabled(False) # Process button is disabled untill all input files are loaded
+    load_button = QPushButton("Load File")
+    process_button = QPushButton("Process")
+    process_button.setEnabled(False)
 
-    # Function for the loading of file
+    # Flags for loaded files
+    dfa_loaded = False
+    input_loaded = False
+
+    # DFA data containers
+    state_dict = {}
+    char_0, char_1 = None, None
+
+    # ------------------- DFA Logic Integration -------------------
+    def process_input(states, inp, char_0, char_1):
+        current_state = "NONE"
+        for state_name, state_params in states.items():
+            if state_params[0] == '-':  # start state
+                if current_state != "NONE":
+                    raise Exception("Multiple start states detected")
+                current_state = state_name
+                break
+
+        for char in inp:
+            if char == char_0:
+                current_state = states[current_state][1]
+            elif char == char_1:
+                current_state = states[current_state][2]
+            else:
+                raise Exception(f"Invalid input character '{char}' detected")
+            
+        if states[current_state][0] == '+':
+            return "VALID"
+        else:
+            return "INVALID"
+
+    # -------------------------------------------------------------
+
     def load_file():
+        nonlocal dfa_loaded, input_loaded, state_dict, char_0, char_1
         file_name, _ = QFileDialog.getOpenFileName(
             window,
             "Open Input File",
             "",
-            "Input Files (*.in *.dfa);;All Files (*)" # File filter for .in and .dfa visibility
+            "Input Files (*.in *.dfa *.txt);;All Files (*)"
         )
 
-        if file_name:
-            try:
-                with open(file_name, "r", encoding="utf-8") as f: # Read file contents if user selected a file
-                    lines = [line.strip() for line in f if line.strip()]
-                    content = "\n".join(lines)
+        if not file_name:
+            return
 
-                if file_name.endswith(".in"):
-                    # Load input file with .in extension
-                    input_text.setPlainText(content)
-                    status_label.setText("STATUS: Input strings loaded successfully.") # Modifies status label when .in file is loaded
-                    process_button.setEnabled(True)
+        try:
+            with open(file_name, "r", encoding="utf-8") as f:
+                lines = [line.strip() for line in f if line.strip()]
 
-                elif file_name.endswith(".dfa"):
-                    # Load input file with .dfa extension
-                    transition_table.setRowCount(len(lines))  # Set rows to be length of rows for the .dfa file
-                    transition_table.setColumnCount(3)
-                    transition_table.setHorizontalHeaderLabels(["State", "0", "1"])
+            if file_name.endswith(".in") or "strings" in file_name:
+                # Input strings file
+                input_text.setPlainText("\n".join(lines))
+                input_loaded = True
+                status_label.setText("STATUS: Input strings loaded successfully.")
 
-                    for r, line in enumerate(lines): # Fill the table with the DFA file data
-                        parts = line.split() # Split each line to be items in the transition table
-                        # Ensure each row has 3 columns filled
-                        for c in range(3):
-                            text = parts[c] if c < len(parts) else ""
-                            item = QTableWidgetItem(text)
-                            item.setTextAlignment(Qt.AlignCenter)
-                            transition_table.setItem(r, c, item) # Insert each items on the dfa file into the row cell
+            elif file_name.endswith(".dfa") or "transitions" in file_name:
+                # DFA transitions file
+                state_dict.clear()
+                char_0, char_1 = lines[0].split(',')
+                for line in lines[1:]:
+                    parts = line.split(',')
+                    if len(parts) == 4:
+                        state_type, state_name, t0, t1 = parts
+                        state_dict[state_name] = (state_type, t0, t1)
 
-                    status_label.setText("STATUS: DFA table loaded successfully.") # Modifies status label when .dfa file is loaded
-                    process_button.setEnabled(True)
+                transition_table.setRowCount(len(state_dict))
+                for r, (state, params) in enumerate(state_dict.items()):
+                    transition_table.setItem(r, 0, QTableWidgetItem(state))
+                    transition_table.setItem(r, 1, QTableWidgetItem(params[1]))
+                    transition_table.setItem(r, 2, QTableWidgetItem(params[2]))
+                    for c in range(3):
+                        transition_table.item(r, c).setTextAlignment(Qt.AlignCenter)
 
-            except Exception as e: # Show error dialog if file fails to load
-                QMessageBox.critical(window, "Error", f"Failed to load file:\n{e}")
-                status_label.setText("STATUS: Error loading file.")
+                dfa_loaded = True
+                status_label.setText("STATUS: DFA transitions loaded successfully.")
 
-    def process_data(): # Function for the process operation
-        input_data = input_text.toPlainText().strip() # Scans and checks if input string exists
+            process_button.setEnabled(dfa_loaded and input_loaded)
+
+        except Exception as e:
+            QMessageBox.critical(window, "Error", f"Failed to load file:\n{e}")
+            status_label.setText("STATUS: Error loading file.")
+
+    def process_data():
+        nonlocal state_dict, char_0, char_1
+        input_data = input_text.toPlainText().strip()
         if not input_data:
             QMessageBox.warning(window, "Warning", "No input data to process.")
             return
+        if not state_dict:
+            QMessageBox.warning(window, "Warning", "No DFA transitions loaded.")
+            return
 
-        result = "" # Text display for the valid and invalid classification in the output
-        output_text.setPlainText(result)
-        status_label.setText("STATUS: Output saved to strings.out.") # Modifies status label when output is displayed
-        QMessageBox.information(window, "Processing Complete", "Output saved to strings.out.")
+        results = []
+        for line in input_data.splitlines():
+            try:
+                result = process_input(state_dict, line.strip(), char_0, char_1)
+                results.append(f"{line}: {result}")
+            except Exception as e:
+                results.append(f"{line}: ERROR ({e})")
 
-    # Connect the functions to their corresponding button operations
+        # Display results
+        output_text.setPlainText("\n".join(results))
+
+        # Save to strings.out
+        try:
+            with open("strings.out", "w", encoding="utf-8") as f:
+                f.write("\n".join(results))
+            status_label.setText("STATUS: Processing complete. Output saved to strings.out.")
+        except Exception as e:
+            QMessageBox.warning(window, "Warning", f"Could not save output: {e}")
+            status_label.setText("STATUS: Processing complete, but failed to save output.")
+
+        QMessageBox.information(window, "Processing Complete", "DFA simulation complete!")
+
+    # ---------------- Layouts -----------------
     load_button.clicked.connect(load_file)
     process_button.clicked.connect(process_data)
 
-    button_layout = QHBoxLayout() # Horizontal layout for the buttons
+    button_layout = QHBoxLayout()
     button_layout.addWidget(load_button)
     button_layout.addWidget(process_button)
 
-    display_layout = QGridLayout() # Grid layout for the display areas
+    display_layout = QGridLayout()
     display_layout.addWidget(transition_label, 0, 0)
     display_layout.addWidget(input_label, 0, 1)
     display_layout.addWidget(output_label, 0, 2)
     display_layout.addWidget(transition_table, 1, 0)
     display_layout.addWidget(input_text, 1, 1)
-    display_layout.addWidget(output_text, 1, 2) # Arranges all widgets in their corresponding row-column positions
+    display_layout.addWidget(output_text, 1, 2)
 
-    # Combine all components in a vertical layout
     main_layout = QVBoxLayout()
     main_layout.addLayout(button_layout)
     main_layout.addLayout(display_layout)
-    main_layout.addWidget(status_label) # Adds the status label display at the bottom
+    main_layout.addWidget(status_label)
 
     window.setLayout(main_layout)
     return window
 
 
 if __name__ == "__main__":
-    app = QApplication(sys.argv) # Create app instance
+    app = QApplication(sys.argv)
     win = main_window()
     win.show()
-    sys.exit(app.exec()) # Run the application event loop, Stops when the X button is clicked
+    sys.exit(app.exec())
