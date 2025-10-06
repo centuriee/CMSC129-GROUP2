@@ -91,39 +91,64 @@ def main_window():
                 status_label.setText("STATUS: Input strings loaded successfully.")
 
             elif file_name.endswith(".dfa") or "transitions" in file_name:
-                # DFA transitions file
-                state_dict.clear()
-                char_0, char_1 = lines[0].split(',')
-                for line in lines[1:]:
-                    parts = line.split(',')
-                    if len(parts) == 4:
+                try:
+                    # DFA transitions file
+                    state_dict.clear()
+                    char_0, char_1 = lines[0].split(',')
+                    start_states = []
+                    for line in lines[1:]:
+                        parts = line.split(',')
+                        if len(parts) != 4:
+                            raise Exception(f"Invalid transition line: '{line}'")
+                        
                         state_type, state_name, t0, t1 = parts
                         state_dict[state_name] = (state_type, t0, t1)
 
-                # Type, State, Input 0, Input 1
-                transition_table.setHorizontalHeaderLabels(["", "State", f"{char_0}", f"{char_1}"])
-                transition_table.setRowCount(len(state_dict))
-                for r, (state, params) in enumerate(state_dict.items()):
-                    state_type, t0, t1 = params
+                        if state_type == '-':
+                            start_states.append(state_name)
 
-                    # Create QTableWidgetItems
-                    item_type = QTableWidgetItem(state_type)
-                    item_state = QTableWidgetItem(state)
-                    item_0 = QTableWidgetItem(t0)
-                    item_1 = QTableWidgetItem(t1)
+                    # error handling
+                    # only 1 start state
+                    if len(start_states) == 0:
+                        raise Exception("No start state found (must have exactly one '-')")
+                    elif len(start_states) > 1:
+                        raise Exception(f"Multiple start states found: {', '.join(start_states)}")
 
-                    # Center align all text
-                    for item in [item_type, item_state, item_0, item_1]:
-                        item.setTextAlignment(Qt.AlignCenter)
+                    # all transitions must point to defined states
+                    for state_name, (_, t0, t1) in state_dict.items():
+                        if t0 not in state_dict:
+                            raise Exception(f"State '{state_name}' transitions to undefined state '{t0}'")
+                        if t1 not in state_dict:
+                            raise Exception(f"State '{state_name}' transitions to undefined state '{t1}'")
 
-                    # Add to table
-                    transition_table.setItem(r, 0, item_type)
-                    transition_table.setItem(r, 1, item_state)
-                    transition_table.setItem(r, 2, item_0)
-                    transition_table.setItem(r, 3, item_1)
+                    # Type, State, Input 0, Input 1
+                    transition_table.setHorizontalHeaderLabels(["", "State", f"{char_0}", f"{char_1}"])
+                    transition_table.setRowCount(len(state_dict))
+                    for r, (state, params) in enumerate(state_dict.items()):
+                        state_type, t0, t1 = params
 
-                dfa_loaded = True
-                status_label.setText("STATUS: DFA transitions loaded successfully.")
+                        # Create QTableWidgetItems
+                        item_type = QTableWidgetItem(state_type)
+                        item_state = QTableWidgetItem(state)
+                        item_0 = QTableWidgetItem(t0)
+                        item_1 = QTableWidgetItem(t1)
+
+                        # Center align all text
+                        for item in [item_type, item_state, item_0, item_1]:
+                            item.setTextAlignment(Qt.AlignCenter)
+
+                        # Add to table
+                        transition_table.setItem(r, 0, item_type)
+                        transition_table.setItem(r, 1, item_state)
+                        transition_table.setItem(r, 2, item_0)
+                        transition_table.setItem(r, 3, item_1)
+
+                    dfa_loaded = True
+                    status_label.setText("STATUS: DFA transitions loaded successfully.")
+
+                except Exception as e:
+                    status_label.setText("STATUS: Unable to load content from test.dfa due to invalid content.")
+                    QMessageBox.critical(window, "Error", f"Failed to load DFA file:\n{e}")
 
             process_button.setEnabled(dfa_loaded and input_loaded)
 
