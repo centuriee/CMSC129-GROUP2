@@ -104,7 +104,7 @@ def main_window():
                         state_type, state_name, t0, t1 = parts
                         state_dict[state_name] = (state_type, t0, t1)
 
-                        if state_type == '-':
+                        if '-' in state_type:
                             start_states.append(state_name)
 
                     # error handling
