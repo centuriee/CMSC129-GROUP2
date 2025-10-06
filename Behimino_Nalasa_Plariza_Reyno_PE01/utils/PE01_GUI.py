@@ -15,11 +15,10 @@ def main_window():
 
     # UI Components
     transition_label = QLabel("Transition Table")
-    transition_table = QTableWidget(0, 3)
-    transition_table.setHorizontalHeaderLabels(["State", "0", "1"])
+    transition_table = QTableWidget(0, 4)
+    transition_table.setHorizontalHeaderLabels(["", "State", "0", "1"])
     transition_table.verticalHeader().setVisible(False)
     transition_table.setEditTriggers(QTableWidget.NoEditTriggers)
-    transition_table.horizontalHeader().setStretchLastSection(True)
 
     input_label = QLabel("Input")
     input_text = QTextEdit()
@@ -46,7 +45,7 @@ def main_window():
     state_dict = {}
     char_0, char_1 = None, None
 
-    # ------------------- DFA Logic Integration -------------------
+    # DFA Logic Integration
     def process_input(states, inp, char_0, char_1):
         current_state = "NONE"
         for state_name, state_params in states.items():
@@ -68,8 +67,6 @@ def main_window():
             return "VALID"
         else:
             return "INVALID"
-
-    # -------------------------------------------------------------
 
     def load_file():
         nonlocal dfa_loaded, input_loaded, state_dict, char_0, char_1
@@ -103,13 +100,27 @@ def main_window():
                         state_type, state_name, t0, t1 = parts
                         state_dict[state_name] = (state_type, t0, t1)
 
+                # Type, State, Input 0, Input 1
+                transition_table.setHorizontalHeaderLabels(["", "State", f"{char_0}", f"{char_1}"])
                 transition_table.setRowCount(len(state_dict))
                 for r, (state, params) in enumerate(state_dict.items()):
-                    transition_table.setItem(r, 0, QTableWidgetItem(state))
-                    transition_table.setItem(r, 1, QTableWidgetItem(params[1]))
-                    transition_table.setItem(r, 2, QTableWidgetItem(params[2]))
-                    for c in range(3):
-                        transition_table.item(r, c).setTextAlignment(Qt.AlignCenter)
+                    state_type, t0, t1 = params
+
+                    # Create QTableWidgetItems
+                    item_type = QTableWidgetItem(state_type)
+                    item_state = QTableWidgetItem(state)
+                    item_0 = QTableWidgetItem(t0)
+                    item_1 = QTableWidgetItem(t1)
+
+                    # Center align all text
+                    for item in [item_type, item_state, item_0, item_1]:
+                        item.setTextAlignment(Qt.AlignCenter)
+
+                    # Add to table
+                    transition_table.setItem(r, 0, item_type)
+                    transition_table.setItem(r, 1, item_state)
+                    transition_table.setItem(r, 2, item_0)
+                    transition_table.setItem(r, 3, item_1)
 
                 dfa_loaded = True
                 status_label.setText("STATUS: DFA transitions loaded successfully.")
@@ -134,9 +145,9 @@ def main_window():
         for line in input_data.splitlines():
             try:
                 result = process_input(state_dict, line.strip(), char_0, char_1)
-                results.append(f"{line}: {result}")
+                results.append(f"{result}")
             except Exception as e:
-                results.append(f"{line}: ERROR ({e})")
+                results.append(f"ERROR ({e})")
 
         # Display results
         output_text.setPlainText("\n".join(results))
@@ -152,7 +163,7 @@ def main_window():
 
         QMessageBox.information(window, "Processing Complete", "DFA simulation complete!")
 
-    # ---------------- Layouts -----------------
+    # Layouts
     load_button.clicked.connect(load_file)
     process_button.clicked.connect(process_data)
 
@@ -167,6 +178,10 @@ def main_window():
     display_layout.addWidget(transition_table, 1, 0)
     display_layout.addWidget(input_text, 1, 1)
     display_layout.addWidget(output_text, 1, 2)
+
+    display_layout.setColumnStretch(0, 5)  # Transition table column (wider)
+    display_layout.setColumnStretch(1, 3)  # Input column
+    display_layout.setColumnStretch(2, 3)  # Output column
 
     main_layout = QVBoxLayout()
     main_layout.addLayout(button_layout)
