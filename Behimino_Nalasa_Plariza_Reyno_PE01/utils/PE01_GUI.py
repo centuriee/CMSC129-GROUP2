@@ -49,7 +49,7 @@ def main_window():
     def process_input(states, inp, char_0, char_1):
         current_state = "NONE"
         for state_name, state_params in states.items():
-            if state_params[0] == '-':  # start state
+            if '-' in state_params[0]:  # start state
                 if current_state != "NONE":
                     raise Exception("Multiple start states detected")
                 current_state = state_name
@@ -63,7 +63,7 @@ def main_window():
             else:
                 raise Exception(f"Invalid input character '{char}' detected")
             
-        if states[current_state][0] == '+':
+        if '+' in states[current_state][0]:
             return "VALID"
         else:
             return "INVALID"
