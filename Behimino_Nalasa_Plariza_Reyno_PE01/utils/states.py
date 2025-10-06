@@ -1,3 +1,5 @@
+# TEST FILE
+
 import os
 
 def process_input(states, inp, char_0, char_1):

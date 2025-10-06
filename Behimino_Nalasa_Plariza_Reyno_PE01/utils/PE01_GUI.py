@@ -178,7 +178,12 @@ def main_window():
         output_text.setPlainText("\n".join(results))
 
         # Save to strings.out in same folder as .py
-        script_dir = os.path.dirname(os.path.abspath(__file__))
+        if getattr(sys, 'frozen', False):
+            # Running as compiled .exe
+            script_dir = os.path.dirname(sys.executable)
+        else:
+            # Running as normal Python script
+            script_dir = os.path.dirname(os.path.abspath(__file__))
         output_path = os.path.join(script_dir, "strings.out")
 
         try:
