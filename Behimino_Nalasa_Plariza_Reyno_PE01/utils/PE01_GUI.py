@@ -177,11 +177,14 @@ def main_window():
         # Display results
         output_text.setPlainText("\n".join(results))
 
-        # Save to strings.out
+        # Save to strings.out in same folder as .py
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        output_path = os.path.join(script_dir, "strings.out")
+
         try:
-            with open("strings.out", "w", encoding="utf-8") as f:
+            with open(output_path, "w", encoding="utf-8") as f:
                 f.write("\n".join(results))
-            status_label.setText("STATUS: Processing complete. Output saved to strings.out.")
+            status_label.setText(f"STATUS: Processing complete. Output saved to strings.out")
         except Exception as e:
             QMessageBox.warning(window, "Warning", f"Could not save output: {e}")
             status_label.setText("STATUS: Processing complete, but failed to save output.")
