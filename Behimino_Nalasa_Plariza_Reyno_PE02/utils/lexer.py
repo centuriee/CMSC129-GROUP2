@@ -30,17 +30,19 @@ class Error:
         return f"Error({self.type}, {self.value})"
 
 class Lexer:
-    NUMBER = r"\d+\.?\d*|\.\d+"
-    VARIABLE = r"[a-zA-Z_][a-zA-Z0-9_]*"
+    INT_LIT = r"\d+"
+    IDENT = r"[a-zA-Z][a-zA-Z0-9]*"
+    SKIP = r"[ \t]+"
     INVALID_VARIABLE_NAME = r"\d+[a-zA-Z_][a-zA-Z0-9_]*"
     OPERATOR = r"[+\-/*%]"
     ASSIGNMENT = r"="
     SKIP = r"[ \t]+"
+    ERR_LEX = r".+"
 
-    # C keywords
+    # IOL KEYWORDS
     KEYWORDS = {
-        "int", "float", "char", "double", "if", "else", "while",
-        "for", "return", "void", "struct", "break", "continue"
+        "IOL", "LOI", "INT", "STR", "INTO", "IS", "BEG", "PRINT", "ADD", "SUB",
+        "MULT", "DIV", "MOD", "NEWLN"
     }
 
     def __init__(self, text: str):
@@ -48,14 +50,16 @@ class Lexer:
 
     def tokenize(self) -> list[Token]:
         token_spec = [
-            ("VARIABLE", self.VARIABLE),
+            ("INT_LIT", self.INT_LIT),
+            ("IDENT", self.IDENT),
             ("INVALID_VARIABLE_NAME", self.INVALID_VARIABLE_NAME),
-            ("NUMBER", self.NUMBER),
             ("OPERATOR", self.OPERATOR),
             ("ASSIGNMENT", self.ASSIGNMENT),
             ("SKIP", self.SKIP),
+            ("ERR_LEX", self.ERR_LEX)
         ]
-        tok_regex = "|".join(f"(?P<{name}>{pattern})" for name, pattern in token_spec)
+        tok_regex = "|".join(
+            f"(?P<{name}>{pattern})" for name, pattern in token_spec)
         get_token = re.compile(tok_regex).finditer
 
         tokens = []
@@ -68,16 +72,19 @@ class Lexer:
                 continue
 
             if kind == "INVALID_VARIABLE_NAME":
-                tokens.append(Error("INVALID_VARIABLE_NAME", value))
+                tokens.append(Token("ERR_LEX", value))
 
-            elif kind == "VARIABLE":
+            elif kind == "IDENT":
                 if value in self.KEYWORDS:
-                    tokens.append(Error("RESERVED_KEYWORD", value))
+                    tokens.append(Token(value, value))
                 else:
-                    tokens.append(Token("VARIABLE", value, None))
+                    tokens.append(Token("IDENT", value, None))
+
+            elif kind == "INT_LIT":
+                tokens.append(Token(kind, value))
 
             else:
-                tokens.append(Token(kind, value))
+                tokens.append(Token("ERR_LEX", value))
 
         return tokens
 

@@ -245,11 +245,10 @@ class ExpressionProcessor:
             self.errors.append(f"Invalid input code: {line}")
             return f"Error processing: {line}", "Invalid"
 
-
 def main_window():
    
     window = QWidget() #Create main window for GUI
-    window.setWindowTitle("PE00: Expression Evaluation")
+    window.setWindowTitle("PE02: Lexical Analysis")
     window.resize(800, 400)
 
    
@@ -263,10 +262,10 @@ def main_window():
             window,
             "Open Input File",
             "",
-            "Input Files (*.in);;All Files (*)" #Filters files visible to be of .in extension
+            "Input Files (*.iol);;All Files (*)" #Filters files visible to be of .in extension
         )
         if file_name:  
-            if file_name.endswith(".in"): #
+            if file_name.endswith(".iol"): #
                 try:
                     with open(file_name, "r", encoding="utf-8") as f: #Reads the file contents when selected
                         lines = f.readlines()
@@ -300,7 +299,15 @@ def main_window():
             processor = Processor()
             output_content = ""
             lines = input_content.split('\n')
-            
+
+            for token in token_stream:
+                if token.name == None:
+                    output_content += f"({token.type}, {token.value})"
+                else:
+                    output_content += f"({token.type}, {token.name}, {token.value})"
+
+
+            '''
             # Process each line
             for line in lines:
                 if line.strip():
@@ -313,12 +320,6 @@ def main_window():
                         output_content += f"Line: {line.strip()}\n"
                         output_content += f"Postfix: {postfixed}\n"
                         output_content += f"Result: {evaluation}\n"
-                        
-                    '''
-                    if result:
-                        postfix, evaluation = result
-                        output_content += f"Result: {evaluation}\n\n"
-                    '''
             
             # Add separator line
             output_content += "-" * 40 + "\n"
@@ -338,6 +339,7 @@ def main_window():
             else:
                 output_content += "None\n"
             
+            '''
             # Display results
             output_text.setPlainText(output_content)
 
