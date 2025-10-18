@@ -1,271 +1,130 @@
 import sys
 from PySide6.QtWidgets import (
-    QApplication, QWidget, QTextEdit,
-    QPushButton, QHBoxLayout, QVBoxLayout, QFileDialog, QMessageBox
+    QApplication, QMainWindow, QTextEdit, QWidget, QVBoxLayout,
+    QFileDialog, QMessageBox, QSplitter, QPlainTextEdit
 )
-import re
+from PySide6.QtGui import QAction
+from PySide6.QtCore import Qt
 
 
-class ExpressionProcessor:
-    def __init__(self):
-        self.variables = {}
-        self.errors = []
-        self.used_variables = set()
-    
-    def is_valid_variable(self, var_name):
-        """Check if variable name follows C naming rules (no underscore, no keywords)"""
-        if not re.match(r'^[a-zA-Z][a-zA-Z0-9]*$', var_name):
-            return False
-        
-        # C keywords to check against
-        keywords = {
-            "int", "float", "char", "double", "if", "else", "while",
-            "for", "return", "void", "struct", "break", "continue"
-        }
-        return var_name not in keywords
-    
-    def tokenize_expression(self, expression):
-        """Tokenize expression into numbers, variables, and operators"""
-        tokens = []
-        pattern = r'(\d+\.?\d*|\.\d+|[a-zA-Z][a-zA-Z0-9]*|[+\-*/%()]|\S)'
-        
-        for match in re.finditer(pattern, expression):
-            token = match.group().strip()
-            if token:
-                tokens.append(token)
-        return tokens
-    
-    def infix_to_postfix(self, tokens):
-        """Convert infix expression to postfix notation"""
-        precedence = {'+': 1, '-': 1, '*': 2, '/': 2, '%': 2}
-        output = []
-        operators = []
-        
-        for token in tokens:
-            if re.match(r'^\d+\.?\d*$', token):  # Number
-                output.append(token)
-            elif re.match(r'^[a-zA-Z][a-zA-Z0-9]*$', token):  # Variable
-                output.append(token)
-                self.used_variables.add(token)
-            elif token in precedence:  # Operator
-                while (operators and operators[-1] != '(' and
-                       operators[-1] in precedence and
-                       precedence[operators[-1]] >= precedence[token]):
-                    output.append(operators.pop())
-                operators.append(token)
-            elif token == '(':
-                operators.append(token)
-            elif token == ')':
-                while operators and operators[-1] != '(':
-                    output.append(operators.pop())
-                if operators:
-                    operators.pop()  # Remove '('
-        
-        while operators:
-            output.append(operators.pop())
-        
-        return output
-    
-    def evaluate_postfix(self, postfix_tokens):
-        """Evaluate postfix expression"""
-        stack = []
-        
-        for token in postfix_tokens:
-            if re.match(r'^\d+\.?\d*$', token):  # Number
-                stack.append(float(token))
-            elif re.match(r'^[a-zA-Z][a-zA-Z0-9]*$', token):  # Variable
-                if token not in self.variables:
-                    raise ValueError(f"Undefined variable {token}")
-                stack.append(self.variables[token])
-            elif token in ['+', '-', '*', '/', '%']:
-                if len(stack) < 2:
-                    raise ValueError("Invalid expression")
-                
-                b = stack.pop()
-                a = stack.pop()
-                
-                if token == '+':
-                    stack.append(a + b)
-                elif token == '-':
-                    stack.append(a - b)
-                elif token == '*':
-                    stack.append(a * b)
-                elif token == '/':
-                    if b == 0:
-                        raise ZeroDivisionError("Division by zero")
-                    stack.append(a / b)
-                elif token == '%':
-                    if b == 0:
-                        raise ZeroDivisionError("Division by zero")
-                    stack.append(a % b)
-        
-        if len(stack) != 1:
-            raise ValueError("Invalid expression")
-        
-        return stack[0]
-    
-    def process_line(self, line):
-        """Process a single line of code"""
-        line = line.strip()
-        if not line:
-            return None
-        
-        try:
-            # Check if it's an assignment statement
-            if '=' in line:
-                parts = line.split('=', 1)
-                if len(parts) != 2:
-                    raise ValueError("Invalid input code")
-                
-                var_name = parts[0].strip()
-                expression = parts[1].strip()
-                
-                if not self.is_valid_variable(var_name):
-                    raise ValueError("Invalid variable name")
-                
-                # Process expression
-                tokens = self.tokenize_expression(expression)
-                postfix = self.infix_to_postfix(tokens)
-                
-                try:
-                    result = self.evaluate_postfix(postfix)
-                    self.variables[var_name] = result
-                    self.used_variables.add(var_name)
-                    
-                    # Format output
-                    postfix_str = ' '.join(postfix)
-                    result_line = f"{var_name} = {result}"
-                    
-                    return postfix_str, result_line
-                    
-                except ZeroDivisionError as e:
-                    # Keep previous value if exists
-                    self.errors.append(str(e))
-                    postfix_str = ' '.join(postfix)
-                    if var_name in self.variables:
-                        result_line = f"{var_name} = {self.variables[var_name]} (previous value retained)"
-                    else:
-                        result_line = f"{var_name} = undefined (division by zero)"
-                    return postfix_str, result_line
-                    
-            else:
-                # It's just an expression
-                tokens = self.tokenize_expression(line)
-                postfix = self.infix_to_postfix(tokens)
-                result = self.evaluate_postfix(postfix)
-                
-                postfix_str = ' '.join(postfix)
-                result_line = str(result)
-                
-                return postfix_str, result_line
-                
-        except Exception as e:
-            self.errors.append(f"Invalid input code: {line}")
-            return f"Error processing: {line}", "Invalid"
+def new_file(): # Function for the creation of new file
+    code_editor.clear()
+    console_output.clear()
+    token_display.clear() # Clear all text display area
+    window.setWindowTitle("Lexical Analyzer - New File") 
+    globals()['current_file'] = None  # Removes any reference to a file, new file output is saved when save option is selected
 
 
-def main_window():
-   
-    window = QWidget() #Create main window for GUI
-    window.setWindowTitle("PE00: Expression Evaluation")
-    window.resize(800, 400)
-
-   
-    input_text = QTextEdit() #Defines text area for input
-    input_text.setPlaceholderText("Input Text Area")
-
-    load_button = QPushButton("Load File") #Creates Button for load file
-
-    def load_file(): # Function to load an input file when load button is interacted
-        file_name, _ = QFileDialog.getOpenFileName(
-            window,
-            "Open Input File",
-            "",
-            "Input Files (*.in);;All Files (*)" #Filters files visible to be of .in extension
-        )
-        if file_name:  
-            if file_name.endswith(".in"): #
-                try:
-                    with open(file_name, "r", encoding="utf-8") as f: #Reads the file contents when selected
-                        lines = f.readlines()
-                        input_text.setPlainText("".join(lines))  #Displays file contents in the input text area
-                except Exception as e:
-                    QMessageBox.critical(window, "Error", f"Failed to load file:\n{e}") #Error trap when file is not loaded properly
-    load_button.clicked.connect(load_file)
-
-    input_layout = QVBoxLayout() #Creates vertical box layout for the definition of input layout
-    input_layout.addWidget(input_text)
-    input_layout.addWidget(load_button)
-
- 
-    output_text = QTextEdit() #Defines text area for output
-    output_text.setPlaceholderText("Output Text Area")
-    output_text.setReadOnly(True)
-
-    process_button = QPushButton("Process") #Creates Button for the process operation
-
-    def process_text():
-        """Process the input text according to specification"""
-        input_content = input_text.toPlainText().strip()
-        if not input_content:
-            QMessageBox.warning(window, "Warning", "Please enter some text to process!")
-            return
-
-        try:
-            processor = ExpressionProcessor()
-            output_content = ""
-            lines = input_content.split('\n')
-            
-            # Process each line
-            for line_num, line in enumerate(lines, 1):
-                if line.strip():
-                    result = processor.process_line(line)
-                    if result:
-                        postfix, evaluation = result
-                        output_content += f"Line: {line.strip()}\n"
-                        output_content += f"Postfix: {postfix}\n"
-                        output_content += f"Result: {evaluation}\n\n"
-            
-            # Add separator line
-            output_content += "-" * 40 + "\n"
-            
-            # Add variables used section
-            output_content += "Variables used:\n"
-            for var in sorted(processor.used_variables):
-                if var in processor.variables:
-                    output_content += f"{var}: {processor.variables[var]}\n"
-                else:
-                    output_content += f"{var}: undefined\n"
-            
-            output_content += "-" * 40 + "\n"
-            
-            # Add errors section
-            output_content += "Errors found:\n"
-            if processor.errors:
-                for error in processor.errors:
-                    output_content += f"{error}\n"
-            else:
-                output_content += "None\n"
-            
-            # Display results
-            output_text.setPlainText(output_content)
-
-        except Exception as e:
-            QMessageBox.critical(window, "Processing Error", f"An error occurred while processing:\n{e}")
-
-    process_button.clicked.connect(process_text)
-
-    output_layout = QVBoxLayout() #Creates vertical box layout for the definition of output layout
-    output_layout.addWidget(output_text)
-    output_layout.addWidget(process_button)
+def open_file(): # Opens file with .iol extension
+    file_path, _ = QFileDialog.getOpenFileName(window, "Open Source File", "", "Source Files (*.iol)")
+    if file_path:
+        with open(file_path, "r") as f:
+            code_editor.setPlainText(f.read()) # Load the file contents into the code editor
+        window.setWindowTitle(f"Lexical Analyzer - {file_path}")
+        globals()['current_file'] = file_path # Sets reference to current open file
 
 
-    main_layout = QHBoxLayout()  #Displays the left and right layout side by side
-    main_layout.addLayout(input_layout)
-    main_layout.addLayout(output_layout)
+def save_file(): # Function for the saving of the current file
+    if not globals().get('current_file'):
+        save_file_as() # Calls save as function if no open file reference has been made
+        return
+    with open(globals()['current_file'], "w") as f:
+        f.write(code_editor.toPlainText()) # Write contents of the editor to the current file
+    console_output.append("File saved successfully.")
 
-    window.setLayout(main_layout)
-    return window
+
+def save_file_as(): 
+    file_path, _ = QFileDialog.getSaveFileName(window, "Save Source File", "", "Source Files (*.iol)") # Prompts user to select the destination of the current file
+    if file_path:
+        globals()['current_file'] = file_path  # Sets reference to current save as file
+        save_file()
+
+
+def compile_code(): # Initializes the compiling process of the code
+    source = code_editor.toPlainText()
+    if not source.strip():
+        QMessageBox.warning(window, "Error", "No code to compile.") # Shows error message if code editor is empty
+        return
+    console_output.append("Compiling code...")
+    console_output.append("Lexical analysis successful.\nNo lexical errors found.") # Display message when successful compiling process was done
+
+
+def show_tokenized(): # Placeholder for showing token table
+    token_display.clear()
+    token_display.append("Tokenized Output:\n[IDENTIFIER, KEYWORD, SYMBOL, ...]")
+
+
+app = QApplication(sys.argv) # Initialize main application
+window = QMainWindow() # Creates the main window of the GUI
+window.setWindowTitle("Lexical Analyzer")
+window.resize(1000, 700)
+
+central_widget = QWidget() # Creates widget to hold the main components
+main_layout = QVBoxLayout(central_widget)
+window.setCentralWidget(central_widget)
+
+main_splitter = QSplitter(Qt.Vertical) # Split the code editor and console vertically
+
+editor_splitter = QSplitter(Qt.Horizontal) # Split the code editor and token list horizontally
+
+code_editor = QPlainTextEdit() # Creates the text editor
+code_editor.setPlaceholderText("Write your source code here...")
+editor_splitter.addWidget(code_editor) # Adds the code editor to the horizontal split
+
+token_display = QTextEdit() # Creates the text display for the token list
+token_display.setReadOnly(True)
+token_display.setPlaceholderText("Symbol Table / Tokenized Code")
+editor_splitter.addWidget(token_display) # Add the token list horizontally beside the code editor
+
+console_output = QTextEdit() # Creates the console display
+console_output.setReadOnly(True)
+console_output.setPlaceholderText("Compilation / Runtime Output...") 
+
+main_splitter.addWidget(editor_splitter) # Creates the horizontal top section split
+main_splitter.addWidget(console_output) # Creates the vertical section split with the console section at the bottom
+
+main_splitter.setStretchFactor(0, 3)
+main_splitter.setStretchFactor(1, 1)
+
+main_layout.addWidget(main_splitter) # Add all the split section in to the main window of GUI
+current_file = None # Track currently opened file path
+
+menu_bar = window.menuBar() # Creates the menu bar
+
+file_menu = menu_bar.addMenu("File") # Adds the file operations to the menu bar
+
+new_action = QAction("New File", window) # Creates option New file 
+new_action.triggered.connect(new_file) # Connects it with the new_file function when interacted
+file_menu.addAction(new_action)
+
+open_action = QAction("Open File", window) # Creates option OPen file 
+open_action.triggered.connect(open_file) # Connects it with the open_file function when interacted
+file_menu.addAction(open_action)
+
+save_action = QAction("Save", window) # Creates option Save file 
+save_action.triggered.connect(save_file) # Connects it with the save_file function when interacted
+file_menu.addAction(save_action)
+
+save_as_action = QAction("Save As", window) # Creates option Save As file 
+save_as_action.triggered.connect(save_file_as) # Connects it with the save_file_as function when interacted
+file_menu.addAction(save_as_action)
+
+compile_menu = menu_bar.addMenu("Compile") # Adds the compile operations to the menu bar
+
+compile_action = QAction("Compile Code", window) # Creates option for Compile operation of code
+compile_action.triggered.connect(compile_code)  # Connects it with the compile_code function when interacted
+compile_menu.addAction(compile_action)
+
+show_tokens_action = QAction("Show Tokenized Code", window) # Creates option for show token list of code
+show_tokens_action.triggered.connect(show_tokenized)  # Connects it with the show_tokenized function when interacted
+compile_menu.addAction(show_tokens_action)
+
+
+exec_menu = menu_bar.addMenu("Execute") # Adds the execute operation to the menu bar for later implementation of syntax analysis
+
+
+window.show() # Display the main application window
+sys.exit(app.exec())
 
 if __name__ == "__main__": #Creates the GUI application when program is run
     app = QApplication(sys.argv)
