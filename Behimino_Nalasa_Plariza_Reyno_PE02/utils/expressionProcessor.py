@@ -1,10 +1,24 @@
+"""
+!!!--- RECENT CHANGES ---!!!
+As of Oct 19 - 12:22PM:
+1. renamed and moved main file from main.py to expressionProcessor.py
+2. GUI removed in this file. Integrated the new GUI to current code
+3. Haskel's commmented code moved to compile_code() function in PE02_GUI.py ---> Reason: ExpressionProcessor is needed there.
+4. token stream output moved and integrated to show_tokenized() function in PE02_GUI.py
+
+Missing code functions:
+1. Haskel's commmented code in compile_code() function in PE02_GUI.py has been integrated, but was only tested on error input code.
+2. Need general checking of new changes. 
+3. Table of variables section might need an actual table output similar to previous PEs.
+
+Commented by: King (KanadeTachie)
+CHANGE THIS PART AS NEEDED. 
+Reduces time trying to find what was changed and what else is missing.
+"""
+
 import sys
 import re
 
-from PySide6.QtWidgets import (
-    QApplication, QWidget, QTextEdit,
-    QPushButton, QHBoxLayout, QVBoxLayout, QFileDialog, QMessageBox
-)
 from utils.postfixer import restring, postfixer
 from utils.lexer import Lexer
 from utils.processor import Processor
@@ -244,124 +258,4 @@ class ExpressionProcessor:
         except Exception as e:
             self.errors.append(f"Invalid input code: {line}")
             return f"Error processing: {line}", "Invalid"
-
-def main_window():
-   
-    window = QWidget() #Create main window for GUI
-    window.setWindowTitle("PE02: Lexical Analysis")
-    window.resize(800, 400)
-
-   
-    input_text = QTextEdit() #Defines text area for input
-    input_text.setPlaceholderText("Input Text Area")
-
-    load_button = QPushButton("Load File") #Creates Button for load file
-
-    def load_file(): # Function to load an input file when load button is interacted
-        file_name, _ = QFileDialog.getOpenFileName(
-            window,
-            "Open Input File",
-            "",
-            "Input Files (*.iol);;All Files (*)" #Filters files visible to be of .in extension
-        )
-        if file_name:  
-            if file_name.endswith(".iol"): #
-                try:
-                    with open(file_name, "r", encoding="utf-8") as f: #Reads the file contents when selected
-                        lines = f.readlines()
-                        input_text.setPlainText("".join(lines))  #Displays file contents in the input text area
-                except Exception as e:
-                    QMessageBox.critical(window, "Error", f"Failed to load file:\n{e}") #Error trap when file is not loaded properly
-    load_button.clicked.connect(load_file)
-
-    input_layout = QVBoxLayout() #Creates vertical box layout for the definition of input layout
-    input_layout.addWidget(input_text)
-    input_layout.addWidget(load_button)
-
-    output_text = QTextEdit() #Defines text area for output
-    output_text.setPlaceholderText("Output Text Area")
-    output_text.setReadOnly(True)
-
-    process_button = QPushButton("Process") #Creates Button for the process operation
-
-    def process_text():
-        """Process the input text according to specification"""
-        input_content = input_text.toPlainText().strip()
-
-        if not input_content:
-            QMessageBox.warning(window, "Warning", "Please enter some text to process!")
-            return
-
-        try:
-            lexer = Lexer(input_content)
-            token_stream = lexer.tokenize()
-
-            processor = Processor()
-            output_content = ""
-            lines = input_content.split('\n')
-
-            for token in token_stream:
-                if token.name == None:
-                    output_content += f"({token.type}, {token.value})"
-                else:
-                    output_content += f"({token.type}, {token.name}, {token.value})"
-
-
-            '''
-            # Process each line
-            for line in lines:
-                if line.strip():
-                    lexer = Lexer(line)
-                    token_stream = lexer.tokenize()
-                    print(token_stream)
-
-                    postfixed, evaluation = processor.process_tokens(token_stream)
-                    if token_stream:
-                        output_content += f"Line: {line.strip()}\n"
-                        output_content += f"Postfix: {postfixed}\n"
-                        output_content += f"Result: {evaluation}\n"
-            
-            # Add separator line
-            output_content += "-" * 40 + "\n"
-            
-            # Add variables used section
-            output_content += "Variables used:\n"
-            for var in processor.saved_token_variables:
-                output_content += f"{var.name}: {var.value}\n"
-
-            output_content += "-" * 40 + "\n"
-            
-            # Add errors section
-            output_content += "Errors found:\n"
-            if processor.errors:
-                for error in processor.errors:
-                    output_content += f"{error}\n"
-            else:
-                output_content += "None\n"
-            
-            '''
-            # Display results
-            output_text.setPlainText(output_content)
-
-        except Exception as e:
-            QMessageBox.critical(window, "Processing Error", f"An error occurred while processing:\n{e}")
-
-    process_button.clicked.connect(process_text)
-
-    output_layout = QVBoxLayout() #Creates vertical box layout for the definition of output layout
-    output_layout.addWidget(output_text)
-    output_layout.addWidget(process_button)
-
-
-    main_layout = QHBoxLayout()  #Displays the left and right layout side by side
-    main_layout.addLayout(input_layout)
-    main_layout.addLayout(output_layout)
-
-    window.setLayout(main_layout)
-    return window
-
-if __name__ == "__main__": #Creates the GUI application when program is run
-    app = QApplication(sys.argv)
-    win = main_window() #Displays the GUI window
-    win.show()
-    sys.exit(app.exec())
+        

@@ -1,10 +1,33 @@
+"""
+!!!--- RECENT CHANGES ---!!!
+As of Oct 19 - 12:22PM:
+1. renamed and moved main file from main.py to expressionProcessor.py
+2. GUI removed in this file. Integrated the new GUI to current code
+3. Haskel's commmented code moved to compile_code() function in PE02_GUI.py ---> Reason: ExpressionProcessor is needed there.
+4. token stream output moved and integrated to show_tokenized() function in PE02_GUI.py
+
+Missing code functions:
+1. Haskel's commmented code in compile_code() function in PE02_GUI.py has been integrated, but was only tested on error input code.
+2. Need general checking of new changes. 
+3. Table of variables section might need an actual table output similar to previous PEs.
+
+Commented by: King (KanadeTachie)
+CHANGE THIS PART AS NEEDED. 
+Reduces time trying to find what was changed and what else is missing.
+"""
+
 import sys
+import re
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QTextEdit, QWidget, QVBoxLayout,
     QFileDialog, QMessageBox, QSplitter, QPlainTextEdit
 )
 from PySide6.QtGui import QAction
 from PySide6.QtCore import Qt
+from utils.postfixer import restring, postfixer
+from utils.lexer import Lexer
+from utils.processor import Processor
+from utils.expressionProcessor import ExpressionProcessor
 
 
 def new_file(): # Function for the creation of new file
@@ -46,12 +69,76 @@ def compile_code(): # Initializes the compiling process of the code
         QMessageBox.warning(window, "Error", "No code to compile.") # Shows error message if code editor is empty
         return
     console_output.append("Compiling code...")
-    console_output.append("Lexical analysis successful.\nNo lexical errors found.") # Display message when successful compiling process was done
 
+    input_content = code_editor.toPlainText().strip()
+    lexer = Lexer(input_content)
+    token_stream = lexer.tokenize()
+    processor = Processor()
+    output_content = ""
+    lines = input_content.split('\n')
 
-def show_tokenized(): # Placeholder for showing token table
+    # Process each line
+    for line in lines:
+        if line.strip():
+            lexer = Lexer(line)
+            token_stream = lexer.tokenize()
+            print(token_stream)
+
+            postfixed, evaluation = processor.process_tokens(token_stream)
+            if token_stream:
+                output_content += f"Line: {line.strip()}\n"
+                output_content += f"Postfix: {postfixed}\n"
+                output_content += f"Result: {evaluation}\n"
+    
+    # Add separator line
+    output_content += "-" * 40 + "\n"
+    
+    # Add variables used section
+    output_content += "Variables used:\n"
+    for var in processor.saved_token_variables:
+        output_content += f"{var.name}: {var.value}\n"
+
+    output_content += "-" * 40 + "\n"
+    
+    # Add errors section
+    output_content += "Errors found:\n"
+    if processor.errors:
+        for error in processor.errors:
+            output_content += f"{error}\n"
+    else:
+        output_content += "None\n"
+
+    console_output.setPlainText(output_content)
+
+    
+def show_tokenized():
     token_display.clear()
-    token_display.append("Tokenized Output:\n[IDENTIFIER, KEYWORD, SYMBOL, ...]")
+    """Process the input text according to specification"""
+    input_content = code_editor.toPlainText().strip()
+
+    if not input_content:
+        QMessageBox.warning(window, "Warning", "Please enter some text to process!")
+        return
+
+    try:
+        lexer = Lexer(input_content)
+        token_stream = lexer.tokenize()
+        processor = Processor()
+        output_content = ""
+        lines = input_content.split('\n')
+
+        for token in token_stream:
+            if token.name == None:
+                output_content += f"({token.type}, {token.value})"
+            else:
+                output_content += f"({token.type}, {token.name}, {token.value})"
+
+        #Haskel's line processing comment moved to compile_code function
+        # Display results
+        token_display.setPlainText(output_content)
+
+    except Exception as e:
+        QMessageBox.critical(window, "Processing Error", f"An error occurred while processing:\n{e}")
 
 
 app = QApplication(sys.argv) # Initialize main application
@@ -121,7 +208,6 @@ compile_menu.addAction(show_tokens_action)
 
 
 exec_menu = menu_bar.addMenu("Execute") # Adds the execute operation to the menu bar for later implementation of syntax analysis
-
 
 window.show() # Display the main application window
 sys.exit(app.exec())
