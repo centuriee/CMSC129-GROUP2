@@ -17,6 +17,7 @@ Reduces time trying to find what was changed and what else is missing.
 """
 # shouldn't this be a commit description? - Haskel (One-L)
 
+import os
 import sys
 import re
 from PySide6.QtWidgets import (
@@ -125,7 +126,6 @@ def show_tokenized():
     try:
         lines = input_content.split('\n')
         output_content = ""
-        print("TOKENIZING...")
 
         for line in lines:
             print(line)
@@ -138,8 +138,19 @@ def show_tokenized():
             output_content += "\n" # newline for clean printing
             #Haskel's line processing comment moved to compile_code function
 
-        # Display results
-        token_display.setPlainText(output_content)
+        if getattr(sys, 'frozen', False):
+            # Running as compiled .exe
+            script_dir = os.path.dirname(sys.executable)
+        else:
+            # Running as normal Python script
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+
+        output_path = os.path.join(script_dir, "tokens.tkn")
+
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write(output_content)
+
+        QMessageBox.information(window, "Success", f"Tokenized output saved to:\n{output_path}")
 
     except Exception as e:
         QMessageBox.critical(window, "Processing Error", f"An error occurred while processing:\n{e}")
