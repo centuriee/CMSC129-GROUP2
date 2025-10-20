@@ -79,17 +79,19 @@ def compile_code(): # Initializes the compiling process of the code
     lines = input_content.split('\n')
 
     # Process each line
+    line_number = 1
     for line in lines:
         if line.strip():
             lexer = Lexer(line)
             token_stream = lexer.tokenize()
             print(token_stream)
 
-            postfixed, evaluation = processor.process_tokens(token_stream)
+            postfixed, evaluation = processor.process_tokens(token_stream, line_number)
             if token_stream:
-                output_content += f"Line: {line.strip()}\n"
+                output_content += f"Line {line_number}: {line.strip()}\n"
                 output_content += f"Postfix: {postfixed}\n"
                 output_content += f"Result: {evaluation}\n"
+        line_number += 1
     
     # Add separator line
     output_content += "-" * 40 + "\n"
@@ -121,19 +123,21 @@ def show_tokenized():
         return
 
     try:
-        lexer = Lexer(input_content)
-        token_stream = lexer.tokenize()
-        processor = Processor()
-        output_content = ""
         lines = input_content.split('\n')
+        output_content = ""
+        print("TOKENIZING...")
 
-        for token in token_stream:
-            if token.name == None:
+        for line in lines:
+            print(line)
+            lexer = Lexer(line)
+            token_stream = lexer.tokenize()
+
+            for token in token_stream:
                 output_content += f"({token.type}, {token.value})"
-            else:
-                output_content += f"({token.type}, {token.name}, {token.value})"
+            
+            output_content += "\n" # newline for clean printing
+            #Haskel's line processing comment moved to compile_code function
 
-        #Haskel's line processing comment moved to compile_code function
         # Display results
         token_display.setPlainText(output_content)
 

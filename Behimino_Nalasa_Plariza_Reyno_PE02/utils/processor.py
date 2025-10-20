@@ -82,7 +82,7 @@ class Processor:
     
         return stack[0]
 
-    def process_tokens(self, token_stream):
+    def process_tokens(self, token_stream, line_number):
         try:
             # initialize state
             if not hasattr(self, "in_block"):
