@@ -75,7 +75,7 @@ class Lexer:
                 if value in self.KEYWORDS:
                     tokens.append(Token(value, value))
                 else:
-                    tokens.append(Token("IDENT", value, None))
+                    tokens.append(Token("IDENT", value))
 
             elif kind == "INT_LIT":
                 tokens.append(Token(kind, value))
