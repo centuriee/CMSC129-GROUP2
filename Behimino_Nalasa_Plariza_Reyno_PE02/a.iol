@@ -1,3 +1,0 @@
-IOL
-INT name IS 67
-LOI

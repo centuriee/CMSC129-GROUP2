@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
 )
 
 from utils.postfixer import restring, postfixer
-from utils.lexer import Lexer
+from utils.lexer import Lexer, Token
 
 
 class Processor:
@@ -149,7 +149,7 @@ class Processor:
                     if assign_index < 2:
                         raise ValueError(f"Invalid assignment syntax.")
 
-                    # handle declaration: e.g. INT num IS 0
+                    # handle int declaration: e.g. INT num IS 0
                     declared_type = None
                     if len(token_stream) >= 3 and token_stream[0].type in {"INT", "STR"}:
                         declared_type = token_stream[0].type
@@ -176,6 +176,49 @@ class Processor:
                         msg = f"Added variable {target_token.name} with value {target_token.value}"
 
                     return restring(postfix_expr), msg
+                
+                # handle STR declaration
+                if len(token_stream) == 2 and token_stream[0].type == "STR":
+                    var_token = token_stream[1]
+
+                    # ensure the second token is a valid identifier
+                    if var_token.type != "IDENT":
+                        raise ValueError(f"Syntax error: expected identifier after STR, got '{var_token.value}'")
+
+                    # ensure variable not already declared
+                    if any(v.name == var_token.value for v in self.saved_token_variables):
+                        raise ValueError(f"Variable '{var_token.value}' already declared")
+
+                    # declare string variable
+                    var_token.name = var_token.value
+                    var_token.type = "STR"
+                    var_token.value = ""
+
+                    self.saved_token_variables.append(var_token)
+                    return f"[STR {var_token.name}]", f"Declared string variable '{var_token.name}' with default value \"\""
+                
+                # handle prefix operations (ADD, SUB, MULT, DIV, MOD)
+                if len(token_stream) >= 3 and token_stream[0].type in {"ADD", "SUB", "MULT", "DIV", "MOD"}:
+                    op_token = token_stream[0]
+                    operand_tokens = token_stream[1:]
+
+                    # exactly two operands required
+                    if len(operand_tokens) != 2:
+                        raise ValueError(f"Operator '{op_token.type}' requires exactly 2 operands, got {len(operand_tokens)}.")
+
+                    # get operand values
+                    values = []
+                    for tok in operand_tokens:
+                        if tok.type == "IDENT":
+                            tok.name = getattr(tok, "name", None) or getattr(tok, "value", None)
+                            existing_var = next((v for v in self.saved_token_variables if v.name == tok.name), None)
+                            if not existing_var:
+                                raise ValueError(f"Undefined variable '{tok.name}' used in '{op_token.type}' operation.")
+                            values.append(existing_var.value)
+                        elif tok.type == "INT_LIT":
+                            values.append(int(tok.value))
+                        else:
+                            raise ValueError(f"Invalid operand '{tok.value}' for operator '{op_token.type}'.")
 
                 # handle PRINT keyword
                 elif len(token_stream) >= 2 and token_stream[0].type == "PRINT":
@@ -185,6 +228,18 @@ class Processor:
                     if not existing:
                         raise ValueError(f"Undefined variable '{ident_token.name}'")
                     return f"[PRINT {ident_token.name}]", f"Output: {existing.value}"
+
+                # handle BEG keyword
+                elif len(token_stream) == 2 and token_stream[0].type == "BEG":
+                    target_name = get_token_name(token_stream[1])
+                    existing = next((v for v in self.saved_token_variables if v.name == target_name), None)
+                    if not existing:
+                        raise ValueError(f"Undefined variable '{target_name}' in BEG statement.")
+
+                    # simulate user input (could later be replaced by actual input)
+                    simulated_value = 0 if existing.type == "INT" else "SimulatedInput"
+                    existing.value = simulated_value
+                    return f"[BEG {target_name}]", f"Simulated input stored in {target_name}: {simulated_value}"
 
                 # otherwise, treat as expression
                 else:

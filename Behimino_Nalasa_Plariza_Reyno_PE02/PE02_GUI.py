@@ -30,13 +30,13 @@ from PySide6.QtCore import Qt
 from utils.postfixer import restring, postfixer
 from utils.lexer import Lexer
 from utils.processor import Processor
-from utils.expressionProcessor import ExpressionProcessor
 
 
 def new_file(): # Function for the creation of new file
     code_editor.clear()
     console_output.clear()
-    variable_table.clear() # Clear all text display area
+    variable_table.clear() # clear all text display area
+    variable_table.setHorizontalHeaderLabels(["Type", "Name"]) # add headers again
     window.setWindowTitle("Lexical Analyzer - New File") 
     globals()['current_file'] = None  # Removes any reference to a file, new file output is saved when save option is selected
 
@@ -138,6 +138,7 @@ def compile_code(): # Initializes the compiling process of the code
     
 def show_tokenized():
     variable_table.clear()
+    variable_table.setHorizontalHeaderLabels(["Type", "Name"]) # add headers again
     """Process the input text according to specification"""
     input_content = code_editor.toPlainText().strip()
     if not input_content:
@@ -195,8 +196,8 @@ code_editor.setPlaceholderText("Write your source code here...")
 editor_splitter.addWidget(code_editor) # Adds the code editor to the horizontal split
 
 variable_label = QLabel("Variable Table")
-variable_table = QTableWidget(0, 3)
-variable_table.setHorizontalHeaderLabels(["Type", "Name", "Value"])
+variable_table = QTableWidget(0, 2)
+variable_table.setHorizontalHeaderLabels(["Type", "Name"])
 variable_table.verticalHeader().setVisible(False)
 variable_table.setEditTriggers(QTableWidget.NoEditTriggers)
 variable_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
