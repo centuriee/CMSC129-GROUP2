@@ -92,6 +92,13 @@ def compile_code(): # Initializes the compiling process of the code
                 output_content += f"Postfix: {postfixed}\n"
                 output_content += f"Result: {evaluation}\n"
         line_number += 1
+
+    if processor.in_block:
+        processor.errors.append({
+            "line": len(lines),
+            "message": "Missing 'LOI': program block was never closed.",
+            "tokens": "EOF"
+        })
     
     # Add separator line
     output_content += "-" * 40 + "\n"

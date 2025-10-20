@@ -116,12 +116,31 @@ class Processor:
                 # store line tokens
                 self.pending_tokens.append(token_stream)
 
+                # validate keyword capitalization
+                valid_keywords = {"IOL", "LOI", "INT", "STR", "INTO", "IS", "BEG", "PRINT", "NEWLN"}
+                for token in token_stream:
+                    if token.value.upper() in valid_keywords and token.value != token.value.upper():
+                        raise ValueError(f"Syntax error: invalid keyword '{token.value}' (did you mean '{token.value.upper()}'?)")
+                    
+                # double identifier or double keyword
+                for i in range(len(token_stream) - 1):
+                    curr = token_stream[i]
+                    nxt = token_stream[i + 1]
+
+                    # Two identifiers in a row (e.g. "num num") — invalid
+                    if curr.type == "IDENT" and nxt.type == "IDENT":
+                        raise ValueError(f"Syntax error: unexpected identifier '{nxt.value}' after '{curr.value}'")
+
+                    # Keyword immediately followed by another keyword (e.g. "INT INT") — invalid
+                    if curr.type in {"INT", "STR", "PRINT", "IOL", "LOI"} and nxt.type in {"INT", "STR", "PRINT", "IOL", "LOI"}:
+                        raise ValueError(f"Syntax error: unexpected keyword '{nxt.type}' after '{curr.type}'")
+
                 # search for all "assignment" type tokens
                 assignments = [t for t in token_stream if t.type == "IS"]
                 
                 # throw an error if number of assignments in one line > 1
                 if len(assignments) > 1:
-                    raise ValueError(f"Invalid input — multiple assignments in one line.")
+                    raise ValueError(f"Invalid input: multiple assignments in one line.")
                 
                 elif len(assignments) == 1:
                     # assignment found — get position
@@ -186,4 +205,3 @@ class Processor:
             self.errors.append(error_obj)
 
             return f"Error processing: {token_stream}", f"Error on line {line_number}: {e}"
-
