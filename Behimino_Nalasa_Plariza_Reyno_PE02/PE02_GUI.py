@@ -22,7 +22,8 @@ import sys
 import re
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QTextEdit, QWidget, QVBoxLayout,
-    QFileDialog, QMessageBox, QSplitter, QPlainTextEdit
+    QFileDialog, QMessageBox, QSplitter, QPlainTextEdit,
+    QLabel, QTableWidget, QHeaderView, QTableWidgetItem
 )
 from PySide6.QtGui import QAction
 from PySide6.QtCore import Qt
@@ -35,7 +36,7 @@ from utils.expressionProcessor import ExpressionProcessor
 def new_file(): # Function for the creation of new file
     code_editor.clear()
     console_output.clear()
-    token_display.clear() # Clear all text display area
+    variable_table.clear() # Clear all text display area
     window.setWindowTitle("Lexical Analyzer - New File") 
     globals()['current_file'] = None  # Removes any reference to a file, new file output is saved when save option is selected
 
@@ -73,8 +74,6 @@ def compile_code(): # Initializes the compiling process of the code
     console_output.append("Compiling code...")
 
     input_content = code_editor.toPlainText().strip()
-    lexer = Lexer(input_content)
-    token_stream = lexer.tokenize()
     processor = Processor()
     output_content = ""
     lines = input_content.split('\n')
@@ -108,15 +107,30 @@ def compile_code(): # Initializes the compiling process of the code
     output_content += "Errors found:\n"
     if processor.errors:
         for error in processor.errors:
-            output_content += f"{error}\n"
+            output_content += f"Line {error['line']}: {error['message']}\n"
     else:
         output_content += "None\n"
 
-    console_output.setPlainText(output_content)
+    if not processor.errors:
+        console_output.setPlainText("Code compiled successfully!")
+        # --- Update variable (symbol) table ---
+        variable_table.setRowCount(0)  # Clear old entries
+        for var in processor.saved_token_variables:
+            row = variable_table.rowCount()
+            variable_table.insertRow(row)
+            variable_table.setItem(row, 0, QTableWidgetItem(getattr(var, "type", "UNKNOWN")))
+            variable_table.setItem(row, 1, QTableWidgetItem(getattr(var, "name", "UNKNOWN")))
+            variable_table.setItem(row, 2, QTableWidgetItem(str(getattr(var, "value", "None"))))
 
+    else:
+        error_display = "Compilation failed. Errors found:\n\n"
+        for error in processor.errors:
+            error_display += f"Line {error['line']}: {error['message']}\n"
+        
+        console_output.setPlainText(error_display)
     
 def show_tokenized():
-    token_display.clear()
+    variable_table.clear()
     """Process the input text according to specification"""
     input_content = code_editor.toPlainText().strip()
     if not input_content:
@@ -173,10 +187,13 @@ code_editor = QPlainTextEdit() # Creates the text editor
 code_editor.setPlaceholderText("Write your source code here...")
 editor_splitter.addWidget(code_editor) # Adds the code editor to the horizontal split
 
-token_display = QTextEdit() # Creates the text display for the token list
-token_display.setReadOnly(True)
-token_display.setPlaceholderText("Symbol Table / Tokenized Code")
-editor_splitter.addWidget(token_display) # Add the token list horizontally beside the code editor
+variable_label = QLabel("Variable Table")
+variable_table = QTableWidget(0, 3)
+variable_table.setHorizontalHeaderLabels(["Type", "Name", "Value"])
+variable_table.verticalHeader().setVisible(False)
+variable_table.setEditTriggers(QTableWidget.NoEditTriggers)
+variable_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+editor_splitter.addWidget(variable_table) # Add the variable table beside the code editor
 
 console_output = QTextEdit() # Creates the console display
 console_output.setReadOnly(True)

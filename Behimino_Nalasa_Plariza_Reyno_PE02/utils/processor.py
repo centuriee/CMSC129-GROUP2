@@ -130,11 +130,15 @@ class Processor:
                     if assign_index < 2:
                         raise ValueError(f"Invalid assignment syntax.")
 
+                    # handle declaration: e.g. INT num IS 0
+                    declared_type = None
+                    if len(token_stream) >= 3 and token_stream[0].type in {"INT", "STR"}:
+                        declared_type = token_stream[0].type
+
                     # target variable is before IS
                     target_token = token_stream[assign_index - 1]
-
-                    # ensure variable name is extracted properly
                     target_token.name = get_token_name(target_token)
+                    target_token.type = declared_type or target_token.type
 
                     rhs_tokens = token_stream[assign_index + 1:]
 
@@ -173,9 +177,13 @@ class Processor:
             raise ValueError(f"Missing 'IOL': code must begin with IOL.")
 
         except Exception as e:
-            # save error for review and return message
-            self.errors.append(str(e))
-            self.errors.append(f"Invalid input code: {restring(token_stream)}")
-            # fix: show error on this line, not delayed
-            return f"Error processing: {token_stream}", f"Error: {e}"
+            # store error as an object for structured reporting
+            error_obj = {
+                "line": line_number,
+                "message": str(e),
+                "tokens": restring(token_stream)
+            }
+            self.errors.append(error_obj)
+
+            return f"Error processing: {token_stream}", f"Error on line {line_number}: {e}"
 
