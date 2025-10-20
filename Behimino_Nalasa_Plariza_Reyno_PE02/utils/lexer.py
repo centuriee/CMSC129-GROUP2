@@ -30,14 +30,13 @@ class Error:
         return f"Error({self.type}, {self.value})"
 
 class Lexer:
-    INT_LIT = r"\d+"
-    IDENT = r"[a-zA-Z][a-zA-Z0-9]*"
+    # okay look i want the thing to see 1.2 as a pure error
+    # hence the space to act as delimiter
+    # also included is the newline and the tab
+    INT_LIT = r"\d+[\n\s\t]"
+    IDENT = r"[a-zA-Z][a-zA-Z0-9]*[\n\s\t]"
     SKIP = r"[ \t]+"
-    INVALID_VARIABLE_NAME = r"\d+[a-zA-Z_][a-zA-Z0-9_]*"
-    OPERATOR = r"[+\-/*%]"
-    ASSIGNMENT = r"="
-    SKIP = r"[ \t]+"
-    ERR_LEX = r".+"
+    ERR_LEX = r"[^\n\s\t]+[\n\s\t]"
 
     # IOL KEYWORDS
     KEYWORDS = {
@@ -46,15 +45,12 @@ class Lexer:
     }
 
     def __init__(self, text: str):
-        self.text = text
+        self.text = text + ' '
 
     def tokenize(self) -> list[Token]:
         token_spec = [
             ("INT_LIT", self.INT_LIT),
             ("IDENT", self.IDENT),
-            ("INVALID_VARIABLE_NAME", self.INVALID_VARIABLE_NAME),
-            ("OPERATOR", self.OPERATOR),
-            ("ASSIGNMENT", self.ASSIGNMENT),
             ("SKIP", self.SKIP),
             ("ERR_LEX", self.ERR_LEX)
         ]
@@ -66,7 +62,8 @@ class Lexer:
 
         for match in get_token(self.text):
             kind = match.lastgroup
-            value = match.group()
+            value = match.group()[:-1]
+            # purge the last character?
 
             if kind == "SKIP":
                 continue

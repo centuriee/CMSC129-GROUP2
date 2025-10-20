@@ -15,6 +15,7 @@ Commented by: King (KanadeTachie)
 CHANGE THIS PART AS NEEDED. 
 Reduces time trying to find what was changed and what else is missing.
 """
+# shouldn't this be a commit description? - Haskel (One-L)
 
 import sys
 import re
@@ -115,7 +116,6 @@ def show_tokenized():
     token_display.clear()
     """Process the input text according to specification"""
     input_content = code_editor.toPlainText().strip()
-
     if not input_content:
         QMessageBox.warning(window, "Warning", "Please enter some text to process!")
         return
