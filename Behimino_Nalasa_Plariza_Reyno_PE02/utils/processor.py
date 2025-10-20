@@ -196,29 +196,6 @@ class Processor:
 
                     self.saved_token_variables.append(var_token)
                     return f"[STR {var_token.name}]", f"Declared string variable '{var_token.name}' with default value \"\""
-                
-                # handle prefix operations (ADD, SUB, MULT, DIV, MOD)
-                if len(token_stream) >= 3 and token_stream[0].type in {"ADD", "SUB", "MULT", "DIV", "MOD"}:
-                    op_token = token_stream[0]
-                    operand_tokens = token_stream[1:]
-
-                    # exactly two operands required
-                    if len(operand_tokens) != 2:
-                        raise ValueError(f"Operator '{op_token.type}' requires exactly 2 operands, got {len(operand_tokens)}.")
-
-                    # get operand values
-                    values = []
-                    for tok in operand_tokens:
-                        if tok.type == "IDENT":
-                            tok.name = getattr(tok, "name", None) or getattr(tok, "value", None)
-                            existing_var = next((v for v in self.saved_token_variables if v.name == tok.name), None)
-                            if not existing_var:
-                                raise ValueError(f"Undefined variable '{tok.name}' used in '{op_token.type}' operation.")
-                            values.append(existing_var.value)
-                        elif tok.type == "INT_LIT":
-                            values.append(int(tok.value))
-                        else:
-                            raise ValueError(f"Invalid operand '{tok.value}' for operator '{op_token.type}'.")
 
                 # handle PRINT keyword
                 elif len(token_stream) >= 2 and token_stream[0].type == "PRINT":
@@ -237,9 +214,47 @@ class Processor:
                         raise ValueError(f"Undefined variable '{target_name}' in BEG statement.")
 
                     # simulate user input (could later be replaced by actual input)
-                    simulated_value = 0 if existing.type == "INT" else "SimulatedInput"
+                    simulated_value = 0 if existing.type == "INT" else "Unknown"
                     existing.value = simulated_value
                     return f"[BEG {target_name}]", f"Simulated input stored in {target_name}: {simulated_value}"
+                
+                def validate_expr(expr_tokens):
+                    prefix_ops = {"ADD", "SUB", "MULT", "DIV", "MOD"}
+
+                    if not expr_tokens:
+                        raise ValueError("Empty expression")
+                    
+                    # if expression is a single literal or identifier
+                    if len(expr_tokens) == 1:
+                        if expr_tokens[0].type not in {"INT_LIT", "STR", "IDENT"}:
+                            raise ValueError(f"Invalid expression token: {expr_tokens[0].value}")
+                        return
+
+                    # if expression is a prefix operation
+                    if expr_tokens[0].type in prefix_ops:
+                        if len(expr_tokens) != 3:
+                            raise ValueError(f"Operator '{expr_tokens[0].type}' requires exactly 2 operands")
+                        for t in expr_tokens[1:]:
+                            if t.type not in {"INT_LIT", "STR", "IDENT"}:
+                                raise ValueError(f"Invalid operand '{t.value}' for operator '{expr_tokens[0].type}'")
+                        return
+
+                    # anything else is invalid
+                    raise ValueError("Invalid expression structure")
+                
+                # Handle INTO statement: INTO IDENT IS expr
+                if token_stream[0].type == "INTO":
+                    if len(token_stream) < 4:
+                        raise ValueError("Incomplete INTO statement")
+                    if token_stream[1].type != "IDENT":
+                        raise ValueError("Expected variable name after INTO")
+                    if token_stream[2].type != "IS":
+                        raise ValueError("Expected 'IS' after variable name in INTO")
+                    
+                    expr_tokens = token_stream[3:]
+                    print(f"PASSING {expr_tokens}")
+                    validate_expr(expr_tokens)  # validate RHS expression
+
 
                 # otherwise, treat as expression
                 else:
