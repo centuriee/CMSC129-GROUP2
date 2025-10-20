@@ -79,19 +79,29 @@ def compile_code(): # Initializes the compiling process of the code
     lines = input_content.split('\n')
 
     # Process each line
-    line_number = 1
-    for line in lines:
+    lex_errors = []
+    noted_variables = []
+    noted_var_names = []
+    for line_number, line in enumerate(lines):
         if line.strip():
             lexer = Lexer(line)
             token_stream = lexer.tokenize()
             print(token_stream)
+
+            for token in token_stream:
+                if token.type == "ERR_LEX":
+                    lex_errors.append((line_number, token))
+
+                if token.type == "IDENT":
+                    if token.name not in noted_var_names:
+                        noted_variables.append(token)
+                        noted_var_names.append(token.name)
 
             postfixed, evaluation = processor.process_tokens(token_stream, line_number)
             if token_stream:
                 output_content += f"Line {line_number}: {line.strip()}\n"
                 output_content += f"Postfix: {postfixed}\n"
                 output_content += f"Result: {evaluation}\n"
-        line_number += 1
 
     if processor.in_block:
         processor.errors.append({
@@ -110,31 +120,42 @@ def compile_code(): # Initializes the compiling process of the code
 
     output_content += "-" * 40 + "\n"
     
+    lex_output = ""
+    if len(lex_errors) != 0:
+        lex_output += "Lexical Errors found:\n"
+        for error in lex_errors:
+            lex_output += f"Line {error[0]}: Unexpected character around string: {error[1].value}\n"
+
     # Add errors section
+    '''
     output_content += "Errors found:\n"
     if processor.errors:
         for error in processor.errors:
             output_content += f"Line {error['line']}: {error['message']}\n"
     else:
         output_content += "None\n"
+    '''
 
-    if not processor.errors:
-        console_output.setPlainText("Code compiled successfully!")
-        # --- Update variable (symbol) table ---
-        variable_table.setRowCount(0)  # Clear old entries
-        for var in processor.saved_token_variables:
-            row = variable_table.rowCount()
-            variable_table.insertRow(row)
-            variable_table.setItem(row, 0, QTableWidgetItem(getattr(var, "type", "UNKNOWN")))
-            variable_table.setItem(row, 1, QTableWidgetItem(getattr(var, "name", "UNKNOWN")))
-            variable_table.setItem(row, 2, QTableWidgetItem(str(getattr(var, "value", "None"))))
+    #if not processor.errors:
+    console_output.setPlainText(lex_output)
+    # --- Update variable (symbol) table ---
+    variable_table.setRowCount(0)  # Clear old entries
+    #for var in processor.saved_token_variables:
+    for var in noted_variables:
+        row = variable_table.rowCount()
+        variable_table.insertRow(row)
+        variable_table.setItem(row, 0, QTableWidgetItem(getattr(var, "type", "UNKNOWN")))
+        variable_table.setItem(row, 1, QTableWidgetItem(getattr(var, "name", "UNKNOWN")))
+        variable_table.setItem(row, 2, QTableWidgetItem(str(getattr(var, "value", "None"))))
 
+    '''
     else:
         error_display = "Compilation failed. Errors found:\n\n"
         for error in processor.errors:
             error_display += f"Line {error['line']}: {error['message']}\n"
         
         console_output.setPlainText(error_display)
+    '''
     
 def show_tokenized():
     variable_table.clear()
@@ -149,13 +170,17 @@ def show_tokenized():
         lines = input_content.split('\n')
         output_content = ""
 
-        for line in lines:
+        error_lexes = []
+        for line_no, line in enumerate(lines):
             print(line)
             lexer = Lexer(line)
             token_stream = lexer.tokenize()
 
             for token in token_stream:
-                output_content += f"({token.type}, {token.value})"
+                if token.name is None:
+                    output_content += f"({token.type}, {token.value})"
+                else:
+                    output_content += f"({token.type}, {token.name}, {token.value})"
             
             output_content += "\n" # newline for clean printing
             #Haskel's line processing comment moved to compile_code function
@@ -195,7 +220,7 @@ code_editor = QPlainTextEdit() # Creates the text editor
 code_editor.setPlaceholderText("Write your source code here...")
 editor_splitter.addWidget(code_editor) # Adds the code editor to the horizontal split
 
-variable_label = QLabel("Variable Table")
+variable_label = QLabel("Potential Detected Variable Table")
 variable_table = QTableWidget(0, 2)
 variable_table.setHorizontalHeaderLabels(["Type", "Name"])
 variable_table.verticalHeader().setVisible(False)
