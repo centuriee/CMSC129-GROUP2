@@ -56,11 +56,140 @@ def parse_input(): # Implements the parse logic based on the entered token seque
     if not tokens:
         QMessageBox.warning(window, "Missing Input", "Please enter a token sequence.")
         return
+    
+    # load productions
+    with open(prod_file, newline='') as csvfile:
+        reader = csv.reader(csvfile)
+        prod_data = list(reader)
 
-    # Parsing logic
-    steps = [
+    if not prod_data:
+        Exception("No data found in Production File location")
+        return
+    
+    first_production_name = None
+    productions = {}
+    for r, row in enumerate(prod_data):
+        current_col = None
+        non_term_name = None
+        prod_result = None
+        for c, cell in enumerate(row):
+            # check column number
+            if c == 0:
+                current_col = cell
+            elif c == 1:
+                non_term_name = cell
+            elif c == 2:
+                prod_result = cell
+            else:
+                Exception("Invalid Column Count in Production File")
+        
+        if productions.get(current_col, None) is None:
+            productions[current_col] = (non_term_name, prod_result)
+        else:
+            Exception("Duplicate Column Count in Production File")
+        
+        if r == 0:
+            first_production_name = non_term_name
+    
+    # load parse table
+    with open(prod_file, newline='') as csvfile:
+        reader = csv.reader(csvfile)
+        table_data = list(reader)
 
-    ]
+    if not table_data:
+        Exception("No data found in Production File location")
+        return
+    
+    first_table_production_name = None
+    parse_table = {}
+    terminals = []
+    for r, row in enumerate(table_data):
+        # assume first row is terminals
+        if r == 0:
+            for c, cell in enumerate(row):
+                if c == 0:
+                    continue
+                terminals.append(cell)
+            continue
+        # populate terminals with terminal symbols (index shifted down)
+
+        production_name = None
+        merged_row_data = {}
+        for c, cell in enumerate(row):
+
+            # give this row its name
+            if c == 0:
+                production_name = cell
+                if r == 1:
+                    first_table_production_name = cell
+                continue
+
+            if cell != "": # if the content of this cell is not empty,
+
+                # retrieve the appropriate production from the dictionary
+                to_be_added = productions.get(cell, None)
+
+                # error checking
+                if to_be_added is None:
+                    Exception("Production with this number does not exist.")
+
+                # add key-value pair of terminal and the production found
+                merged_row_data[terminals[c+1]] = to_be_added
+                
+        if parse_table.get(production_name, None) is not None:
+            Exception("Duplicate production names in parse table")
+        
+        parse_table[production_name] = merged_row_data
+
+    # reference parse table like this parse_table[current_production][terminal]
+
+    if first_production_name != first_table_production_name:
+        Exception("Unsure about first production to use. Make sure they match!")
+    
+    # THE STACK HERE IS IN REVERSE WHEN READING WITH CODE!!!
+    stack = ['$', first_production_name]
+    tokens += "$"
+
+    steps = []
+    while not stack and tokens != "":
+        current_state = stack.pop()
+
+        # check for current lookahead
+        lookahead = None
+        for term in terminals:
+            if tokens.startswith(term):
+                lookahead = term
+        
+        # invalid character detected
+        if lookahead is None:
+            steps.append((*stack.reverse(), tokens, 
+                          "Invalid terminal detected at head of string"))
+            break
+
+        # no data
+        next_step = parse_table.get(current_state, None)
+        if next_step is None:
+            steps.append((*stack.reverse(), tokens, 
+                          "No data present for current state"))
+            break
+
+        # no rule
+        output = next_step.get(lookahead, None)
+        if output is None:
+            steps.append((*stack.reverse(), tokens, 
+                          "No rule detected with current lookahead"))
+        
+        # this isn't schizo talk okay
+        # im splitting the output into their own productions
+        # then removing all spaces
+        # then reversing it
+        output = [i for i in output.split(' ') if i != ' '].reverse()
+        for prod in output:
+            stack.append(prod)
+
+
+
+            
 
     parsing_table.setRowCount(len(steps))
     parsing_table.setColumnCount(3)
