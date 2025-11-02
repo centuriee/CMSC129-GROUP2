@@ -92,7 +92,7 @@ def parse_input(): # Implements the parse logic based on the entered token seque
             first_production_name = non_term_name
     
     # load parse table
-    with open(prod_file, newline='') as csvfile:
+    with open(ptbl_file, newline='') as csvfile:
         reader = csv.reader(csvfile)
         table_data = list(reader)
 
@@ -134,7 +134,7 @@ def parse_input(): # Implements the parse logic based on the entered token seque
                     Exception("Production with this number does not exist.")
 
                 # add key-value pair of terminal and the production found
-                merged_row_data[terminals[c+1]] = to_be_added
+                merged_row_data[terminals[c-1]] = to_be_added[1]
                 
         if parse_table.get(production_name, None) is not None:
             Exception("Duplicate production names in parse table")
@@ -151,8 +151,8 @@ def parse_input(): # Implements the parse logic based on the entered token seque
     tokens += "$"
 
     steps = []
-    while not stack and tokens != "":
-        current_state = stack.pop()
+    while stack and tokens != "":
+        current_state = stack[-1]
 
         # check for current lookahead
         lookahead = None
@@ -162,30 +162,51 @@ def parse_input(): # Implements the parse logic based on the entered token seque
         
         # invalid character detected
         if lookahead is None:
-            steps.append((*stack.reverse(), tokens, 
+            steps.append((" ".join(map(str, stack[::-1])), tokens, 
                           "Invalid terminal detected at head of string"))
             break
 
-        # no data
-        next_step = parse_table.get(current_state, None)
-        if next_step is None:
-            steps.append((*stack.reverse(), tokens, 
-                          "No data present for current state"))
-            break
+        if current_state == lookahead:
+            tokens = tokens.removeprefix(lookahead).strip()
+            stack.pop()
+            steps.append((" ".join(map(str, stack[::-1])), tokens,
+                         f"Match {lookahead}"))
 
-        # no rule
-        output = next_step.get(lookahead, None)
-        if output is None:
-            steps.append((*stack.reverse(), tokens, 
-                          "No rule detected with current lookahead"))
-        
-        # this isn't schizo talk okay
-        # im splitting the output into their own productions
-        # then removing all spaces
-        # then reversing it
-        output = [i for i in output.split(' ') if i != ' '].reverse()
-        for prod in output:
-            stack.append(prod)
+        elif current_state in terminals:
+            steps.append((*steps.reverse(), tokens,
+                         f"Unable to match lookahead with terminal"))
+            break
+        else:
+            # no data
+            next_step = parse_table.get(current_state, None)
+            if next_step is None:
+                steps.append((" ".join(map(str, stack[::-1])), tokens, 
+                            "No data present for current state"))
+                break
+
+            # no rule
+            output = next_step.get(lookahead, None)
+            if output is None:
+                steps.append((" ".join(map(str, stack[::-1])), tokens, 
+                            "No rule detected with current lookahead"))
+                break
+            
+            # this isn't schizo talk okay
+            # im splitting the output into their own productions
+            # then removing all spaces
+            # then reversing it
+            stack.pop()
+            output = [i for i in output.split(' ') if i != ' ']
+            for prod in output[::-1]:
+                if prod == 'e':
+                    continue
+                stack.append(prod)
+
+            # no missed checks, do the thing
+            steps.append((" ".join(map(str, stack[::-1])), tokens, 
+                        f"Output {current_state} > {" ".join(map(str, output))}"))
+
+            
 
 
 
