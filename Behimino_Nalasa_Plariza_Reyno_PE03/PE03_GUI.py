@@ -244,7 +244,7 @@ def parse_input(): # Implements the parse logic based on the entered token seque
     outname, ok = QInputDialog.getText(window, "Save Parsed Result", "Enter output file name:")
 
     if not ok or not outname.strip():
-        QMessageBox.warning(window, "Cancelled", "Saving cancelled — no filename entered.")
+        QMessageBox.warning(window, "Cancelled", "Output filename cannot be empty.")
         return
     
     # check if valid filename
@@ -260,20 +260,19 @@ def parse_input(): # Implements the parse logic based on the entered token seque
     # combine
     filename = f"{outname.strip()}_{prodname}.prsd"
 
-    if getattr(sys, 'frozen', False):
-        # Running as compiled .exe
-        script_dir = os.path.dirname(sys.executable)
-    else:
-        # Running as normal Python script
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-
-    output_path = os.path.join(script_dir, filename)
+    # same directory as input
+    output_dir = os.path.dirname(prod_file)
+    output_path = os.path.join(output_dir, filename)
 
     # write to .prsd
-    with open(output_path, "w", newline='') as outfile:
-        writer = csv.writer(outfile)
-        writer.writerow(["STACK", "INPUT", "ACTION"])
-        writer.writerows(steps)
+    try:
+        with open(output_path, "w", newline='') as outfile:
+            writer = csv.writer(outfile)
+            writer.writerow(["STACK", "INPUT", "ACTION"])
+            writer.writerows(steps)
+    except Exception as e:
+        QMessageBox.critical(window, "File Error", f"Could not save file:\n{e}")
+        return
 
     # Parsing Validation Logic
     print(f"stack: {stack}") # stack checker
