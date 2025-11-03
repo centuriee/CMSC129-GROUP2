@@ -151,9 +151,14 @@ def parse_input(): # Implements the parse logic based on the entered token seque
     tokens += "$"
 
     steps = []
-    while stack and tokens != "":
+    #adding the missing initial state
+    steps.append((" ".join(map(str, stack[::-1])), tokens, " "))
+
+    #while stack works the same
+    while stack:
         current_state = stack[-1]
 
+        
         # check for current lookahead
         lookahead = None
         for term in terminals:
