@@ -1,0 +1,9 @@
+STACK,INPUT,ACTION
+E $,id$, 
+T E' $,id$,Output E > T E'
+F T' E' $,id$,Output T > F T'
+id T' E' $,id$,Output F > id
+T' E' $,$,Match id
+E' $,$,Output T' > e
+$,$,Output E' > e
+,,Match $

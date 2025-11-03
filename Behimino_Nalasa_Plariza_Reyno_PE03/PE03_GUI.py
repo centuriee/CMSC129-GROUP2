@@ -3,6 +3,7 @@ from PySide6.QtWidgets import (
     QLineEdit, QPushButton, QFileDialog, QTableWidget, QTableWidgetItem,
     QMessageBox, QHeaderView, QGroupBox, QInputDialog
 )
+from PySide6.QtCore import Qt
 import csv, sys, os
 
 # Global variable for input file tracking
@@ -222,9 +223,20 @@ def parse_input(): # Implements the parse logic based on the entered token seque
     parsing_table.setColumnCount(3)
     parsing_table.setHorizontalHeaderLabels(["STACK", "INPUT", "ACTION"]) # Populate the table with the data row by row
     for i, (stack, inp, act) in enumerate(steps):
-        parsing_table.setItem(i, 0, QTableWidgetItem(stack))
-        parsing_table.setItem(i, 1, QTableWidgetItem(inp))
-        parsing_table.setItem(i, 2, QTableWidgetItem(act))
+
+        # right align stack
+        stack_item = QTableWidgetItem(stack)
+        stack_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        parsing_table.setItem(i, 0, QTableWidgetItem(stack_item))
+
+        # right align input buffer
+        inp_item = QTableWidgetItem(inp)
+        inp_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        parsing_table.setItem(i, 1, QTableWidgetItem(inp_item))
+
+        # default align act
+        act_item = QTableWidgetItem(act)
+        parsing_table.setItem(i, 2, QTableWidgetItem(act_item))
 
     parsing_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
@@ -330,6 +342,7 @@ parsing_table.setColumnCount(3)
 parsing_table.setHorizontalHeaderLabels(["STACK", "INPUT BUFFER", "ACTION"])
 parsing_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 parsing_table.verticalHeader().setVisible(False)
+parsing_table.setStyleSheet("QTableWidget::item { padding: 0px 6px; }")
 
 main_layout.addLayout(tables_layout)  # Adds all created components and arranged it in the main application
 main_layout.addLayout(load_layout)
