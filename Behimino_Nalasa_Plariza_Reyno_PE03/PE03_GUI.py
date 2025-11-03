@@ -228,8 +228,51 @@ def parse_input(): # Implements the parse logic based on the entered token seque
 
     parsing_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
-    # result_label.setText("PARSING: Valid. Please see test_rules.prsd.")  # Parsing Validation Logic
-    result_label.setStyleSheet("font-weight: bold; color: green;")
+    # PRSD file logic
+    outname, ok = QInputDialog.getText(window, "Save Parsed Result", "Enter output file name:")
+
+    if not ok or not outname.strip():
+        QMessageBox.warning(window, "Cancelled", "Saving cancelled — no filename entered.")
+        return
+    
+    # check if valid filename
+    outname = outname.strip()
+    invalid_chars = r'\/:*?"<>|'
+    if any(ch in invalid_chars for ch in outname):
+        QMessageBox.warning(window, "Invalid Filename", "Filename contains invalid characters.")
+        return
+
+    # base name of .prod file
+    prodname = os.path.splitext(os.path.basename(prod_file))[0]
+
+    # combine
+    filename = f"{outname.strip()}_{prodname}.prsd"
+
+    if getattr(sys, 'frozen', False):
+        # Running as compiled .exe
+        script_dir = os.path.dirname(sys.executable)
+    else:
+        # Running as normal Python script
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+
+    output_path = os.path.join(script_dir, filename)
+
+    # write to .prsd
+    with open(output_path, "w", newline='') as outfile:
+        writer = csv.writer(outfile)
+        writer.writerow(["STACK", "INPUT", "ACTION"])
+        writer.writerows(steps)
+
+    # Parsing Validation Logic
+    print(f"stack: {stack}") # stack checker
+    print(f"tokens: {tokens.strip()}") # token checker
+    if not stack and tokens.strip() == "":
+        result_label.setText(f"PARSING: Valid. Please see {filename}.")
+        result_label.setStyleSheet("font-weight: bold; color: green;")
+
+    else:
+        result_label.setText(f"PARSING: Invalid. Please see {filename}.")
+        result_label.setStyleSheet("font-weight: bold; color: red;")
 
 app = QApplication(sys.argv) # Initializes the application
 window = QWidget() # Creates the main application window
