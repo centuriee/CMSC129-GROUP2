@@ -12,10 +12,19 @@ ptbl_file = None
 
 def load_file(): # Function for the loading of input files
     global prod_file, ptbl_file
+
     file_path, _ = QFileDialog.getOpenFileName(window, "Select File", "", "CSV Files (*.prod *.ptbl)")
     if not file_path:
         QMessageBox.information(window, "Cancelled", "File loading cancelled.")
         return
+
+    # reset parsing table when any file is loaded
+    parsing_table.clear()
+    parsing_table.setRowCount(0)
+    parsing_table.setColumnCount(3)
+    parsing_table.setHorizontalHeaderLabels(["STACK", "INPUT BUFFER", "ACTION"])
+    result_label.setText("PARSING: Not started.")
+    result_label.setStyleSheet("font-weight: bold; color: #007acc;")
 
     file_name = os.path.basename(file_path)
     loaded_label.setText(f"LOADED: {file_name}")
@@ -33,8 +42,25 @@ def load_file(): # Function for the loading of input files
         QMessageBox.warning(window, "Invalid File", "Please select a .prod or .ptbl file.")
         return
 
-    # Enable Parse button if both files are loaded
+    # Enable Parse button if both files are loaded AND of the same name
     if prod_file and ptbl_file:
+        prod_base = os.path.splitext(os.path.basename(prod_file))[0]
+        ptbl_base = os.path.splitext(os.path.basename(ptbl_file))[0]
+
+        if prod_base != ptbl_base:
+            QMessageBox.warning(window, "File Name Mismatch", "Productions and Parse Table files must have the same base name.\nPlease load matching files.")
+            # reset files
+            prod_file = None
+            ptbl_file = None
+            prod_label.setText("Productions: None")
+            ptbl_label.setText("Parse Table: None")
+            parse_button.setEnabled(False)
+            loaded_label.setText("LOADED: None")
+            prod_table.clear()
+            parse_table.clear()
+            return
+
+        # valid pair
         parse_button.setEnabled(True)
 
 def load_csv_to_table(table_widget, file_path): # Display CSV contents to each corresponding table displays
@@ -221,7 +247,7 @@ def parse_input(): # Implements the parse logic based on the entered token seque
 
     parsing_table.setRowCount(len(steps))
     parsing_table.setColumnCount(3)
-    parsing_table.setHorizontalHeaderLabels(["STACK", "INPUT", "ACTION"]) # Populate the table with the data row by row
+    parsing_table.setHorizontalHeaderLabels(["STACK", "INPUT BUFFER", "ACTION"]) # Populate the table with the data row by row
     for i, (stack, inp, act) in enumerate(steps):
 
         # right align stack
@@ -241,48 +267,49 @@ def parse_input(): # Implements the parse logic based on the entered token seque
     parsing_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
     # PRSD file logic
+    filename = ""
     outname, ok = QInputDialog.getText(window, "Save Parsed Result", "Enter output file name:")
 
     if not ok or not outname.strip():
         QMessageBox.warning(window, "Cancelled", "Output filename cannot be empty.")
-        return
     
-    # check if valid filename
-    outname = outname.strip()
-    invalid_chars = r'\/:*?"<>|'
-    if any(ch in invalid_chars for ch in outname):
-        QMessageBox.warning(window, "Invalid Filename", "Filename contains invalid characters.")
-        return
+    else:
+        # check if valid filename
+        outname = outname.strip()
+        invalid_chars = r'\/:*?"<>|'
+        if any(ch in invalid_chars for ch in outname):
+            QMessageBox.warning(window, "Invalid Filename", "Filename contains invalid characters.")
+            return
 
-    # base name of .prod file
-    prodname = os.path.splitext(os.path.basename(prod_file))[0]
+        # base name of .prod file
+        prodname = os.path.splitext(os.path.basename(prod_file))[0]
 
-    # combine
-    filename = f"{outname.strip()}_{prodname}.prsd"
+        # combine
+        filename = f"{outname.strip()}_{prodname}.prsd"
 
-    # same directory as input
-    output_dir = os.path.dirname(prod_file)
-    output_path = os.path.join(output_dir, filename)
+        # same directory as input
+        output_dir = os.path.dirname(prod_file)
+        output_path = os.path.join(output_dir, filename)
 
-    # write to .prsd
-    try:
-        with open(output_path, "w", newline='') as outfile:
-            writer = csv.writer(outfile)
-            writer.writerow(["STACK", "INPUT", "ACTION"])
-            writer.writerows(steps)
-    except Exception as e:
-        QMessageBox.critical(window, "File Error", f"Could not save file:\n{e}")
-        return
+        # write to .prsd
+        try:
+            with open(output_path, "w", newline='') as outfile:
+                writer = csv.writer(outfile)
+                writer.writerow(["STACK", "INPUT", "ACTION"])
+                writer.writerows(steps)
+        except Exception as e:
+            QMessageBox.critical(window, "File Error", f"Could not save file:\n{e}")
+            return
 
     # Parsing Validation Logic
     print(f"stack: {stack}") # stack checker
     print(f"tokens: {tokens.strip()}") # token checker
     if not stack and tokens.strip() == "":
-        result_label.setText(f"PARSING: Valid. Please see {filename}.")
+        result_label.setText(f"PARSING: Valid." if not filename else f"PARSING: Valid. Please see {filename}.")
         result_label.setStyleSheet("font-weight: bold; color: green;")
 
     else:
-        result_label.setText(f"PARSING: Invalid. Please see {filename}.")
+        result_label.setText(f"PARSING: Invalid." if not filename else f"PARSING: Invalid. Please see {filename}.")
         result_label.setStyleSheet("font-weight: bold; color: red;")
 
 app = QApplication(sys.argv) # Initializes the application
