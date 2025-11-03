@@ -86,7 +86,7 @@ def parse_input(): # Implements the parse logic based on the entered token seque
         if productions.get(current_col, None) is None:
             productions[current_col] = (non_term_name, prod_result)
         else:
-            Exception("Duplicate Column Count in Production File")
+            Exception("Duplicate row number in Production File")
         
         if r == 0:
             first_production_name = non_term_name
@@ -100,7 +100,6 @@ def parse_input(): # Implements the parse logic based on the entered token seque
         Exception("No data found in Production File location")
         return
     
-    first_table_production_name = None
     parse_table = {}
     terminals = []
     for r, row in enumerate(table_data):
@@ -120,8 +119,6 @@ def parse_input(): # Implements the parse logic based on the entered token seque
             # give this row its name
             if c == 0:
                 production_name = cell
-                if r == 1:
-                    first_table_production_name = cell
                 continue
 
             if cell != "": # if the content of this cell is not empty,
@@ -134,6 +131,9 @@ def parse_input(): # Implements the parse logic based on the entered token seque
                     Exception("Production with this number does not exist.")
 
                 # add key-value pair of terminal and the production found
+                if to_be_added[0] != production_name:
+                    Exception("Production name in parse table does not match production file")
+
                 merged_row_data[terminals[c-1]] = to_be_added[1]
                 
         if parse_table.get(production_name, None) is not None:
@@ -143,8 +143,9 @@ def parse_input(): # Implements the parse logic based on the entered token seque
 
     # reference parse table like this parse_table[current_production][terminal]
 
-    if first_production_name != first_table_production_name:
-        Exception("Unsure about first production to use. Make sure they match!")
+    # honestly, this check is rather unnecessary. 
+    #if first_production_name != first_table_production_name:
+    #    Exception("Unsure about first production to use. Make sure they match!")
     
     # THE STACK HERE IS IN REVERSE WHEN READING WITH CODE!!!
     stack = ['$', first_production_name]
