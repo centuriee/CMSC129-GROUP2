@@ -4,9 +4,11 @@ class Parser:
     def __init__(self, filename = "tokens.tkn"):
         self.filename = filename
         self.raw_file = self.read_file()
+        self.lines = self.raw_file.splitlines()  # store raw lines for error reporting
         self.content = self.load_tokens()
         self.pos = 0
 
+    # file reading
     def read_file(self):
         try:
             with open(self.filename, 'r') as file:
@@ -16,14 +18,17 @@ class Parser:
         except Exception as e:
             print(f"Error reading file: {e}")
 
+    # token loading
     def load_tokens(self):
-        tokens = self.read_file()
-
-        # regex to extract tokens of form (TYPE, value)
+        all_tokens = []
         pattern = r"\(\s*([A-Za-z_]+)\s*,\s*([A-Za-z0-9_]+)\s*\)"
-        matches = re.findall(pattern, tokens)
 
-        return [(typ, val) for typ, val in matches]
+        for line_number, line in enumerate(self.lines, start = 1):
+            matches = re.findall(pattern, line)
+            for typ, val in matches:
+                all_tokens.append((typ, val, line_number))
+
+        return all_tokens
 
     # for printing
     def print_tokens(self):
@@ -32,20 +37,24 @@ class Parser:
     def print_raw_file(self):
         print(self.raw_file)
 
-
-    # parsing logic
+    # token utilities
     def current(self):
         if self.pos < len(self.content):
             return self.content[self.pos]
-        return ("EOF", "EOF")
+        return ("EOF", "EOF", -1)
 
     def match(self, expected_type):
-        token_type, token_val = self.current()
+        token_type, token_val, line_num = self.current()
         if token_type == expected_type:
             self.pos += 1
         else:
+            # Print the raw line where the error occurred
+            line_values = [val for _, val, ln in self.content if ln == line_num]
+            raw_line = " ".join(line_values)
             raise SyntaxError(
-                f"Expected {expected_type}, got {token_type} at token index {self.pos}"
+                f"Syntax error occurred at line {line_num}:\n"
+                f"{raw_line}\n"
+                f"Expected {expected_type}, got {token_type}"
             )
         
 
@@ -57,9 +66,9 @@ class Parser:
     # program -> IOL stmts LOI
     def IOL(self):
         # ensures program starts with IOL
-        token_type, token_val = self.current()
+        token_type, token_val, _ = self.current()
         if token_type != "IOL":
-            raise SyntaxError(f"Program must start with 'IOL', got '{token_val}' ({token_type}) at index {self.pos}")
+            raise SyntaxError(f"Program must start with 'IOL', got '{token_val}' ({token_type})")
 
         self.match("IOL")
         self.stmts()
@@ -69,20 +78,20 @@ class Parser:
         token_type, _ = self.current()
         if token_type != "EOF":
             raise SyntaxError(
-                f"Unexpected token after LOI: {token_type} at index {self.pos}"
+                f"Unexpected token after LOI: {token_type}"
             )
 
     # stmts -> stmt stmts | e
     def stmts(self):
         while True:
-            token_type, _ = self.current()
+            token_type, _, _ = self.current()
             if token_type == "LOI":
                 break
             self.stmt()
 
     # stmt -> INT | STR | BEG | INTO | NEWLN | PRINT | operation
     def stmt(self):
-        token_type, _ = self.current()
+        token_type, _, _ = self.current()
 
         if token_type == "INT":
             self.INT()
@@ -98,6 +107,15 @@ class Parser:
             self.operation()
         elif token_type == "NEWLN":
             self.match("NEWLN")
+        else:
+            _, _, line_num = self.current()
+            line_values = [val for _, val, ln in self.content if ln == line_num]
+            raw_line = " ".join(line_values)
+            raise SyntaxError(
+                f"Unexpected token at line {line_num}:\n"
+                f"{raw_line}\n"
+                f"Got {token_type}"
+            )
 
     """ 
         changed last statement from number to expr. main issue with this is type compatibility
@@ -147,7 +165,14 @@ class Parser:
             self.operation()
 
         else:
-            raise SyntaxError(f"Expected expr (IDENT, INT_LIT, OPERATION), got {token_type}")
+            _, _, line_num = self.current()
+            line_values = [val for _, val, ln in self.content if ln == line_num]
+            raw_line = " ".join(line_values)
+            raise SyntaxError(
+                f"Expected expr (IDENT, INT_LIT, OPERATION) at line {line_num}:\n"
+                f"{raw_line}\n"
+                f"Got {token_type}"
+            )
     
     # operation -> (ADD | SUB | MULT | DIV | MOD) number number
     def operation(self):
@@ -155,7 +180,14 @@ class Parser:
         token_type, _ = self.current()
 
         if token_type not in ("ADD", "SUB", "MULT", "DIV", "MOD"):
-            raise SyntaxError(f"Expected OPERATOR, got {token_type}")
+            _, _, line_num = self.current()
+            line_values = [val for _, val, ln in self.content if ln == line_num]
+            raw_line = " ".join(line_values)
+            raise SyntaxError(
+                f"Expected operator at line {line_num}:\n"
+                f"{raw_line}\n"
+                f"Got {token_type}"
+            )
 
         self.match(token_type)
 
@@ -177,7 +209,14 @@ class Parser:
             self.operation()
 
         else:
-            raise SyntaxError(f"Expected number (INT_LIT or OPERATION), got {token_type}")
+            _, _, line_num = self.current()
+            line_values = [val for _, val, ln in self.content if ln == line_num]
+            raw_line = " ".join(line_values)
+            raise SyntaxError(
+                f"Expected number (INT_LIT, OPERATION) at line {line_num}:\n"
+                f"{raw_line}\n"
+                f"Got {token_type}"
+            )
     """ DEPRECATED FUNC, idk if needed still since meron na ang expr() """
 
 
@@ -191,8 +230,13 @@ class Parser:
 
 def main():
     parser = Parser()
-    parser.print_raw_file()
-    print(parser.parse())
+    # parser.print_raw_file()
+    try:
+        result = parser.parse()
+        print(result)
+    except SyntaxError as e:
+        print(e)
+
 
 if __name__ == "__main__":
     main()
