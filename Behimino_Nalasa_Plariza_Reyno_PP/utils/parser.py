@@ -279,14 +279,16 @@ class Parser:
                         value = str(user_input)
                     else:
                         raise ParserError(
-                            f"Line {line_num}: SEMANTIC ERROR; Unknown variable type '{var_type}'"
+                            f"Line {line_num}: SEMANTIC ERROR; Unknown \
+                                variable type '{var_type}'"
                         )
                     
                     self.symbol_table.assign_var(variable_name, value)
                     
                 except ValueError:
                     raise ParserError(
-                        f"Line {line_num}: SEMANTIC ERROR; Invalid input for variable '{variable_name}' of type {var_type}"
+                        f"Line {line_num}: SEMANTIC ERROR; Invalid input for \
+                            variable '{variable_name}' of type {var_type}"
                     )
 
     # INTO -> INTO IDENT IS expr
@@ -294,7 +296,17 @@ class Parser:
         self.match("INTO")
         _, var_name, _ = self.match("IDENT")
         self.match("IS")
-        _, new_value, _ = self.expr()
+        value_type, new_value, line_num = self.expr()
+
+        if value_type == "IDENT":
+            value_name = new_value
+            value_type = self.symbol_table.get_var_type(new_value)
+            new_value = self.symbol_table.get_var_value(new_value)
+
+        if self.symbol_table.get_var_type(var_name) != value_type:
+            raise ParserError(f"Line {line_num}: SEMANTIC ERROR; value " \
+                                f"of type {value_type} cannot go into {var_name}"
+                                f"with type {self.symbol_table.get_var_type(var_name)}")
 
         self.symbol_table.assign_var(var_name, new_value)
 

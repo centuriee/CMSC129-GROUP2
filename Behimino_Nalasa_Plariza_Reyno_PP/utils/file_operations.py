@@ -141,11 +141,13 @@ def compile_code(main_window):
     else:
         main_window.console_output.append("Parsing successful!")
 
-    # (3) "EXECUTE" PROGRAM
-    parser = Parser(False, main_window = main_window)  # Pass main_window reference to parser
-    if parser.semantic_errors:
-        main_window.console_output.append("Execution failed:")
-        for err in parser.semantic_errors:
-            main_window.console_output.append(err)
-    else:
-        main_window.console_output.append("Program Terminated")
+        # (3) "EXECUTE" PROGRAM ONLY IF SUCCESSFUL
+        parser = Parser(False, main_window = main_window)  # Pass main_window reference to parser
+        if parser.semantic_errors:
+            main_window.console_output.append("Execution failed:")
+            for err in parser.semantic_errors:
+                main_window.console_output.append(err)
+        else:
+            main_window.console_output.append("Program Terminated")
+
+    
