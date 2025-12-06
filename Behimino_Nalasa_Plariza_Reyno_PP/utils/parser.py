@@ -32,7 +32,7 @@ class Symbol_Table:
             python_type = int if var[0] == 'INT_LIT' else str if var[0] == 'STR' else None
 
             if(type(new_value) != python_type):
-                Exception(f"SEMANTIC ERROR; Cannot assign {new_value} to variable {name} with type {var[0]}")
+                raise Exception(f"SEMANTIC ERROR; Cannot assign {new_value} to variable {name} with type {var[0]}")
             else:
                 self.entries[name] = (var[0], new_value)
 
@@ -199,7 +199,7 @@ class Parser:
 
             self.symbol_table.create_var(var_name, returned_value, 'INT_LIT')
         else:
-            self.symbol_table.create_var(var_name[1], 0, 'INT_LIT')
+            self.symbol_table.create_var(var_name, 0, 'INT_LIT')
 
     # STR -> STR IDENT
     def STR(self):
@@ -219,23 +219,28 @@ class Parser:
     # INTO -> INTO IDENT IS expr
     def INTO(self):
         self.match("INTO")
-        var_name = self.match("IDENT")
+        _, var_name, _ = self.match("IDENT")
         self.match("IS")
-        new_value = self.expr()
+        new_type, new_value, _ = self.expr()
+
+        if new_type == "IDENT":
+            new_value = self.symbol_table.get_var_value(new_value)
 
         self.symbol_table.assign_var(var_name, new_value)
 
     # PRINT -> PRINT expr
     def PRINT(self):
         self.match("PRINT")
-        var_type, var, _ = self.expr()
+        var_type, var_name, line_num = self.expr()
 
         if(var_type == 'IDENT'):
-            var = self.symbol_table.get_var_value(var)
+            var = self.symbol_table.get_var_value(var_name)
+            if var is None:
+                ParserError(f"Line {line_num}: {var} is undefined")
         elif(var_type == 'INT_LIT'):
-            pass
+            var = var_name
         else:
-            ParserError(f"Line {_}: Unexpected token type intercepted {var_type}")
+            ParserError(f"Line {line_num}: Unexpected token type intercepted {var_type}")
         print(var)
 
     # helper functions

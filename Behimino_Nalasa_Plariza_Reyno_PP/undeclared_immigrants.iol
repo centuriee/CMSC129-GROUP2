@@ -1,0 +1,5 @@
+IOL
+INT a
+INTO b IS 2
+PRINT b
+LOI
