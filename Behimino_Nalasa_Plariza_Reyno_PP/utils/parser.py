@@ -32,7 +32,7 @@ class Symbol_Table:
             python_type = int if var[0] == 'INT_LIT' else str if var[0] == 'STR' else None
 
             if(type(new_value) != python_type):
-                raise Exception(f"SEMANTIC ERROR; Cannot assign {new_value} to variable {name} with type {var[0]}")
+                Exception(f"SEMANTIC ERROR; Cannot assign {new_value} to variable {name} with type {var[0]}")
             else:
                 self.entries[name] = (var[0], new_value)
 
@@ -61,7 +61,7 @@ class Symbol_Table:
             raise ParserError(f"SEMANTIC ERROR; Variable {name} does not exist.")
 
 class Parser:
-    def __init__(self, filename = "tokens.tkn"):
+    def __init__(self, filename = "tokens.tkn", main_window = None):
         # create path relative to parser.py
         current_dir = os.path.dirname(os.path.abspath(__file__))
         self.filename = os.path.join(os.path.dirname(current_dir), filename)
@@ -71,6 +71,7 @@ class Parser:
         self.pos = 0
         self.semantic_errors = []
         self.symbol_table = Symbol_Table()
+        self.main_window = main_window  # Store reference to GUI
 
         self.result = None
         try:
@@ -207,41 +208,102 @@ class Parser:
         token_to_create = self.match("IDENT")
 
         # token type, token val, line num
-        self.symbol_table.create_var(token_to_create[1], None, 'STR')
+        self.symbol_table.create_var(token_to_create[1], "", 'STR')
 
     # BEG -> BEG IDENT
     def BEG(self):
         self.match("BEG")
-        variable_to_assign = self.match("IDENT")
+        _, variable_name, line_num = self.match("IDENT")
 
-        # add code to call a window to ask user for value
+        # Check if variable exists
+        if variable_name not in self.symbol_table.entries:
+            raise ParserError(
+                f"Line {line_num}: SEMANTIC ERROR; Variable '{variable_name}' must be declared before using BEG"
+            )
+
+        # Get variable type to determine what kind of input to expect
+        var_type = self.symbol_table.get_var_type(variable_name)
+
+        # Show input dialog if GUI is available
+        if self.main_window is not None:
+            user_input = self.main_window.show_input_dialog(variable_name)
+            
+            if user_input is None:
+                raise ParserError(
+                    f"Line {line_num}: User cancelled input for variable '{variable_name}'"
+                )
+            
+            # Type conversion based on variable type
+            try:
+                if var_type == 'INT_LIT':
+                    value = int(user_input)
+                elif var_type == 'STR':
+                    value = str(user_input)
+                else:
+                    raise ParserError(
+                        f"Line {line_num}: SEMANTIC ERROR; Unknown variable type '{var_type}'"
+                    )
+                
+                self.symbol_table.assign_var(variable_name, value)
+                
+                # Log to console
+                if self.main_window is not None:
+                    self.main_window.console_output.append(
+                        f"User input for '{variable_name}': {value}"
+                    )
+                    
+            except ValueError:
+                raise ParserError(
+                    f"Line {line_num}: SEMANTIC ERROR; Invalid input for variable '{variable_name}' of type {var_type}. Expected a valid {var_type} value."
+                )
+        else:
+            # Fallback to console input if no GUI
+            print(f"Enter value for '{variable_name}' ({var_type}): ", end='')
+            user_input = input()
+            
+            try:
+                if var_type == 'INT_LIT':
+                    value = int(user_input)
+                elif var_type == 'STR':
+                    value = str(user_input)
+                else:
+                    raise ParserError(
+                        f"Line {line_num}: SEMANTIC ERROR; Unknown variable type '{var_type}'"
+                    )
+                
+                self.symbol_table.assign_var(variable_name, value)
+                
+            except ValueError:
+                raise ParserError(
+                    f"Line {line_num}: SEMANTIC ERROR; Invalid input for variable '{variable_name}' of type {var_type}"
+                )
 
     # INTO -> INTO IDENT IS expr
     def INTO(self):
         self.match("INTO")
         _, var_name, _ = self.match("IDENT")
         self.match("IS")
-        new_type, new_value, _ = self.expr()
-
-        if new_type == "IDENT":
-            new_value = self.symbol_table.get_var_value(new_value)
+        _, new_value, _ = self.expr()
 
         self.symbol_table.assign_var(var_name, new_value)
 
     # PRINT -> PRINT expr
     def PRINT(self):
         self.match("PRINT")
-        var_type, var_name, line_num = self.expr()
+        var_type, var, _ = self.expr()
 
         if(var_type == 'IDENT'):
-            var = self.symbol_table.get_var_value(var_name)
-            if var is None:
-                ParserError(f"Line {line_num}: {var} is undefined")
+            var = self.symbol_table.get_var_value(var)
         elif(var_type == 'INT_LIT'):
-            var = var_name
+            pass
         else:
-            ParserError(f"Line {line_num}: Unexpected token type intercepted {var_type}")
-        print(var)
+            ParserError(f"Line {_}: Unexpected token type intercepted {var_type}")
+        
+        # Print to GUI console if available
+        if self.main_window is not None:
+            self.main_window.console_output.append(f"Output: {var}")
+        else:
+            print(var)
 
     # helper functions
     # expr -> IDENT | INT_LIT | operation

@@ -1,5 +1,5 @@
 (IOL, IOL)
-(INT, INT)(IDENT, a)
-(INTO, INTO)(IDENT, b)(IS, IS)(INT_LIT, 2)
-(PRINT, PRINT)(IDENT, b)
+(INT, INT)(IDENT, myNumber)
+(BEG, BEG)(IDENT, myNumber)
+(PRINT, PRINT)(IDENT, myNumber)
 (LOI, LOI)

@@ -132,7 +132,7 @@ def compile_code(main_window):
         QMessageBox.critical(main_window, "Processing Error", f"An error occurred while processing:\n{e}")
 
     # (2) RUN PARSER
-    parser = Parser()
+    parser = Parser(main_window=main_window)  # Pass main_window reference to parser
     if parser.semantic_errors:
         main_window.console_output.append("Parsing failed:")
         for err in parser.semantic_errors:

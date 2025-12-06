@@ -3,12 +3,60 @@ import sys
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QTextEdit, QWidget, QVBoxLayout,
     QFileDialog, QMessageBox, QSplitter, QPlainTextEdit,
-    QLabel, QTableWidget, QHeaderView, QTableWidgetItem
+    QLabel, QTableWidget, QHeaderView, QTableWidgetItem,
+    QDialog, QLineEdit, QPushButton, QHBoxLayout
 )
 from PySide6.QtGui import QAction
 from PySide6.QtCore import Qt
 from utils.file_operations import new_file, open_file, save_file, save_file_as, show_tokenized, compile_code
 
+class InputDialog(QDialog):
+    """Custom dialog for BEG statement input"""
+    def __init__(self, variable_name, parent=None):
+        super().__init__(parent)
+        self.variable_name = variable_name
+        self.user_input = None
+        self.setup_ui()
+    
+    def setup_ui(self):
+        self.setWindowTitle(f"Input Required: {self.variable_name}")
+        self.setModal(True)
+        self.resize(400, 120)
+        
+        layout = QVBoxLayout(self)
+        
+        # Label
+        label = QLabel(f"Enter value for variable '{self.variable_name}':")
+        layout.addWidget(label)
+        
+        # Input field
+        self.input_field = QLineEdit()
+        self.input_field.setPlaceholderText("Enter value here...")
+        layout.addWidget(self.input_field)
+        
+        # Buttons
+        button_layout = QHBoxLayout()
+        
+        self.ok_button = QPushButton("OK")
+        self.ok_button.clicked.connect(self.accept_input)
+        button_layout.addWidget(self.ok_button)
+        
+        self.cancel_button = QPushButton("Cancel")
+        self.cancel_button.clicked.connect(self.reject)
+        button_layout.addWidget(self.cancel_button)
+        
+        layout.addLayout(button_layout)
+        
+        # Connect Enter key to OK button
+        self.input_field.returnPressed.connect(self.accept_input)
+        
+    def accept_input(self):
+        self.user_input = self.input_field.text()
+        self.accept()
+    
+    def get_input(self):
+        return self.user_input
+    
 class MainWindow(QMainWindow):
     def __init__(self, main_dir = None):
         super().__init__()
@@ -105,3 +153,10 @@ class MainWindow(QMainWindow):
 
     def compile_code(self):
         compile_code(self)
+
+    def show_input_dialog(self, variable_name):
+        """Show input dialog for BEG statement"""
+        dialog = InputDialog(variable_name, self)
+        if dialog.exec() == QDialog.Accepted:
+            return dialog.get_input()
+        return None
