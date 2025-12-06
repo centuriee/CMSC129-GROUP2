@@ -9,16 +9,25 @@ class Symbol_Table:
     def __init__(self, entries = {}):
         self.entries = entries
 
-    # call to create a new variable or to assign a value to one
-    def assign_var(self, name, value = None, var_type = None):
+    # call to create a new variable
+    def create_var(self, name, value, var_type):
+        # basically overrides old value, no checking lmao
+        self.entries[name] = (var_type, value)
+            
+    # call to replace variable
+    def assign_var(self, name, new_value):
         var = self.entries.get(name)
 
-        # if does not exist, create
+        # if does not exist, throw error
         if var is None:
-            self.entries[name] = (var_type, value)
+            ParserError(f"Variable {name} does not exist.")
         else:
-            # if does exist, do some typechecking
+            python_type = int if var[0] == 'INT_LIT' else str if var[0] == 'STR' else None
 
+            if(type(new_value) != python_type):
+                Exception(f"Cannot assign {new_value} to variable {name} with type {var[0]}")
+            else:
+                self.entries[name] = (var[0], new_value)
 
     def get_var_type(self, name):
         var = self.entries.get(name)
@@ -54,8 +63,7 @@ class Parser:
         self.content = self.load_tokens()
         self.pos = 0
         self.semantic_errors = []
-
-        self.symbol_table []
+        self.symbol_table = Symbol_Table()
 
         self.result = None
         try:
@@ -97,6 +105,7 @@ class Parser:
         token_type, token_val, line_num = self.current()
         if token_type == expected_type:
             self.pos += 1
+            return self.current()
         else:
             raise ParserError(
                 f"Line {line_num}: Expected {expected_type}, "
@@ -169,26 +178,44 @@ class Parser:
     # INT -> INT IDENT IS NUMBER
     def INT(self):
         self.match("INT")
-        self.match("IDENT")
-        self.match("IS")
-        self.expr()
+        var_name = self.match("IDENT")
+
+        next_token = self.current()
+        if next_token[0] == "IS":
+            self.match("IS")
+            _, returned_value, _ = self.expr()
+
+            if type(returned_value) != int:
+                Exception(f"Value {returned_value} cannot be assigned to \
+                    variable {var_name} of type INT_LIT")
+
+            self.symbol_table.create_var(var_name[1], returned_value[1], 'INT_LIT')
+        else:
+            self.symbol_table.create_var(var_name[1], 0, 'INT_LIT')
 
     # STR -> STR IDENT
     def STR(self):
         self.match("STR")
-        self.match("IDENT")
+        token_to_create = self.match("IDENT")
+
+        # token type, token val, line num
+        self.symbol_table.create_var(token_to_create[1], None, 'STR')
 
     # BEG -> BEG IDENT
     def BEG(self):
         self.match("BEG")
-        self.match("IDENT")
+        variable_to_assign = self.match("IDENT")
+
+        # add code to call a window to ask user for value
 
     # INTO -> INTO IDENT IS expr
     def INTO(self):
         self.match("INTO")
-        self.match("IDENT")
+        var_name = self.match("IDENT")
         self.match("IS")
-        self.expr()
+        new_value = self.expr()
+
+        self.symbol_table.assign_var(var_name, new_value)
 
     # PRINT -> PRINT expr
     def PRINT(self):
@@ -201,13 +228,13 @@ class Parser:
         token_type, _, _ = self.current()
 
         if token_type == "IDENT":
-            self.match("IDENT")
+            return self.match("IDENT")
 
         elif token_type == "INT_LIT":
-            self.match("INT_LIT")
+            return self.match("INT_LIT")
 
         elif token_type in ("ADD", "SUB", "MULT", "DIV", "MOD"):
-            self.operation()
+            return self.operation()
 
         else:
             _, _, line_num = self.current()
@@ -224,14 +251,14 @@ class Parser:
             raise ParserError(
                 f"Line {line_num}: Expected operator, got {token_type}"
             )
+        elif token_type == "ADD":
+            self.match(token_type)
+            _, var_1, line_num = self.expr()
+            _, var_2, line_num = self.expr()
 
-        self.match(token_type)
+            
+            return ("INT_LIT")
 
-        # operand 1
-        self.expr()
-
-        # operand 2
-        self.expr()
 
     """ DEPRECATED FUNC, idk if needed still since meron na ang expr() """
     # number -> INT_LIT | operation
