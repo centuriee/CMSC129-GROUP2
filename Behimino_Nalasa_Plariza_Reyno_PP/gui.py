@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtGui import QAction
 from PySide6.QtCore import Qt
-from utils.file_operations import new_file, open_file, save_file, save_file_as, show_tokenized, compile_code
+from utils.file_operations import new_file, open_file, save_file, save_file_as, show_tokenized, compile_code, execute_code
 
 class InputDialog(QDialog):
     """Custom dialog for BEG statement input"""
@@ -60,6 +60,7 @@ class InputDialog(QDialog):
 class MainWindow(QMainWindow):
     def __init__(self, main_dir = None):
         super().__init__()
+        self.compilation_successful = False
         self.current_file = None  # Track currently opened file path
         self.main_dir = main_dir or os.getcwd()
         self.setup_UI()
@@ -125,15 +126,14 @@ class MainWindow(QMainWindow):
             self.compile_menu = self.menu_bar.addMenu("Compile") # Adds the compile operations to the menu bar
 
             self.compile_action = QAction("Compile Code", self) # Creates option for Compile operation of code
-            self.compile_action.triggered.connect(self.compile_code)  # Connects it with the compile_code function when interacted
+            self.compile_action.triggered.connect(self.compile_code) # Connects it with the compile_code function when interacted
             self.compile_menu.addAction(self.compile_action)
 
-            self.show_tokens_action = QAction("Show Tokenized Code", self) # Creates option for show token list of code
-            self.show_tokens_action.triggered.connect(self.show_tokenized)  # Connects it with the show_tokenized function when interacted
-            self.compile_menu.addAction(self.show_tokens_action)
-
-
             self.exec_menu = self.menu_bar.addMenu("Execute") # Adds the execute operation to the menu bar for later implementation of syntax analysis
+
+            self.execute_action = QAction("Execute Program", self)
+            self.execute_action.triggered.connect(self.execute_code)
+            self.exec_menu.addAction(self.execute_action)
 
 
     def new_file(self): 
@@ -153,6 +153,9 @@ class MainWindow(QMainWindow):
 
     def compile_code(self):
         compile_code(self)
+
+    def execute_code(self):
+        execute_code(self)
 
     def show_input_dialog(self, variable_name):
         """Show input dialog for BEG statement"""

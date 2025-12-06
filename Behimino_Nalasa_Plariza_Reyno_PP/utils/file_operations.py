@@ -85,7 +85,7 @@ def compile_code(main_window):
     input_content = main_window.code_editor.toPlainText().strip()
     if not input_content:
         QMessageBox.warning(main_window, "Warning", "Please enter some text to process!")
-        return
+        return False
 
     try:
         lines = input_content.split('\n')
@@ -117,8 +117,8 @@ def compile_code(main_window):
             main_window.console_output.append(
                 "Lexical analysis failed:<br>" + "<br>".join(lexical_errors)
             )
-            return
-        
+            return False
+
         else:
             main_window.console_output.append("Lexical analysis successful!")
             # save tokens.tkn
@@ -132,22 +132,31 @@ def compile_code(main_window):
         QMessageBox.critical(main_window, "Processing Error", f"An error occurred while processing:\n{e}")
 
     # (2) RUN PARSER
+    success = False
     parser = Parser(True, main_window = main_window)  # Pass main_window reference to parser
     if parser.semantic_errors:
         main_window.console_output.append("Parsing failed:")
         for err in parser.semantic_errors:
             main_window.console_output.append(err)
-        return
+        success = False
     else:
         main_window.console_output.append("Parsing successful!")
+        success = True
 
-        # (3) "EXECUTE" PROGRAM ONLY IF SUCCESSFUL
-        parser = Parser(False, main_window = main_window)  # Pass main_window reference to parser
-        if parser.semantic_errors:
-            main_window.console_output.append("Execution failed:")
-            for err in parser.semantic_errors:
-                main_window.console_output.append(err)
-        else:
-            main_window.console_output.append("Program Terminated")
+    main_window.compilation_successful = success
+    return success
 
+def execute_code(main_window):
+    # (3) "EXECUTE" PROGRAM ONLY IF SUCCESSFUL
+    main_window.console_output.append("Program will now be executed.\n\nIOL Execution:\n")
+    if not getattr(main_window, "compilation_successful", False):
+        QMessageBox.warning(main_window, "Warning", "Please compile successfully before executing.")
+        return
     
+    parser = Parser(False, main_window = main_window)  # Pass main_window reference to parser
+    if parser.semantic_errors:
+        main_window.console_output.append("Execution failed:")
+        for err in parser.semantic_errors:
+            main_window.console_output.append(err)
+    else:
+        main_window.console_output.append("\nProgram terminated successfully.")
