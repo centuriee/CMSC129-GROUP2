@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtGui import QAction
 from PySide6.QtCore import Qt
-from utils.file_operations import new_file, open_file, save_file, save_file_as, show_tokenized
+from utils.file_operations import new_file, open_file, save_file, save_file_as, show_tokenized, compile_code
 
 class MainWindow(QMainWindow):
     def __init__(self, main_dir = None):
@@ -76,9 +76,9 @@ class MainWindow(QMainWindow):
 
             self.compile_menu = self.menu_bar.addMenu("Compile") # Adds the compile operations to the menu bar
 
-            # compile_action = QAction("Compile Code", window) # Creates option for Compile operation of code
-            # compile_action.triggered.connect(compile_code)  # Connects it with the compile_code function when interacted
-            # compile_menu.addAction(compile_action)
+            self.compile_action = QAction("Compile Code", self) # Creates option for Compile operation of code
+            self.compile_action.triggered.connect(self.compile_code)  # Connects it with the compile_code function when interacted
+            self.compile_menu.addAction(self.compile_action)
 
             self.show_tokens_action = QAction("Show Tokenized Code", self) # Creates option for show token list of code
             self.show_tokens_action.triggered.connect(self.show_tokenized)  # Connects it with the show_tokenized function when interacted
@@ -102,3 +102,6 @@ class MainWindow(QMainWindow):
         
     def show_tokenized(self):
         show_tokenized(self)
+
+    def compile_code(self):
+        compile_code(self)

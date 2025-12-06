@@ -1,12 +1,21 @@
-import re
+import re, os
 
 class Parser:
     def __init__(self, filename = "tokens.tkn"):
-        self.filename = filename
+        # create path relative to parser.py
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        self.filename = os.path.join(os.path.dirname(current_dir), filename)
         self.raw_file = self.read_file()
         self.lines = self.raw_file.splitlines()  # store raw lines for error reporting
         self.content = self.load_tokens()
         self.pos = 0
+        self.semantic_errors = []
+
+        self.result = None
+        try:
+            self.result = self.parse()
+        except Exception as e:
+            self.semantic_errors.append(str(e))
 
     # file reading
     def read_file(self):
@@ -44,18 +53,27 @@ class Parser:
         return ("EOF", "EOF", -1)
 
     def match(self, expected_type):
-        token_type, token_val, line_num = self.current()
+        token_type, _, line_num = self.current()
         if token_type == expected_type:
             self.pos += 1
+            return
         else:
-            # Print the raw line where the error occurred
-            line_values = [val for _, val, ln in self.content if ln == line_num]
-            raw_line = " ".join(line_values)
-            raise SyntaxError(
-                f"Syntax error occurred at line {line_num}:\n"
-                f"{raw_line}\n"
-                f"Expected {expected_type}, got {token_type}"
+            self.semantic_errors.append(
+                f"Line {line_num}: Expected {expected_type}, got {token_type}"
             )
+            self.sync()
+            return
+    
+    # panic mode recovery
+    def sync(self):
+        safe_tokens = {"INT", "STR", "BEG", "INTO", "PRINT", "NEWLN", "LOI", "EOF"}
+
+        while self.pos < len(self.content):
+            token_type, _, _ = self.current()
+            print(token_type)
+            if token_type in safe_tokens:
+                return
+            self.pos += 1  # always advance
         
 
     # GRAMMAR
@@ -66,26 +84,32 @@ class Parser:
     # program -> IOL stmts LOI
     def IOL(self):
         # ensures program starts with IOL
-        token_type, token_val, _ = self.current()
+        token_type, _, line_num = self.current()
         if token_type != "IOL":
-            raise SyntaxError(f"Program must start with 'IOL', got '{token_val}' ({token_type})")
-
-        self.match("IOL")
-        self.stmts()
-        self.match("LOI")
-
-        # ensures program ends with LOI
-        token_type, _ = self.current()
-        if token_type != "EOF":
-            raise SyntaxError(
-                f"Unexpected token after LOI: {token_type}"
+            self.semantic_errors.append(
+                f"Line {line_num}: Program must start with 'IOL', started with {token_type}"
             )
+            self.sync()
+            return
+
+        self.match("IOL")  # consume IOL
+        self.stmts()       # parse statements
+        self.match("LOI")  # consume LOI
+
+        # ensure program ends with EOF
+        token_type, _, _ = self.current()
+        if token_type != "EOF":
+            self.semantic_errors.append(
+                f"Line {line_num}: Program must end with 'LOI', ended with {token_type}"
+            )
+            self.sync()
+            return
 
     # stmts -> stmt stmts | e
     def stmts(self):
         while True:
             token_type, _, _ = self.current()
-            if token_type == "LOI":
+            if token_type in ("LOI", "IOL", "EOF"):
                 break
             self.stmt()
 
@@ -109,13 +133,12 @@ class Parser:
             self.match("NEWLN")
         else:
             _, _, line_num = self.current()
-            line_values = [val for _, val, ln in self.content if ln == line_num]
-            raw_line = " ".join(line_values)
-            raise SyntaxError(
-                f"Unexpected token at line {line_num}:\n"
-                f"{raw_line}\n"
-                f"Got {token_type}"
+
+            self.semantic_errors.append(
+                f"Line {line_num}: Unexpected token {token_type}"
             )
+            self.sync()
+            return
 
     """ 
         changed last statement from number to expr. main issue with this is type compatibility
@@ -166,28 +189,23 @@ class Parser:
 
         else:
             _, _, line_num = self.current()
-            line_values = [val for _, val, ln in self.content if ln == line_num]
-            raw_line = " ".join(line_values)
-            raise SyntaxError(
-                f"Expected expr (IDENT, INT_LIT, OPERATION) at line {line_num}:\n"
-                f"{raw_line}\n"
-                f"Got {token_type}"
+            self.semantic_errors.append(
+                f"Line {line_num}: Expected IDENT, INT_LIT, or OPERATION, got {token_type}"
             )
-    
+            self.sync()
+            return
+
     # operation -> (ADD | SUB | MULT | DIV | MOD) number number
     def operation(self):
-        # operator
         token_type, _ = self.current()
 
         if token_type not in ("ADD", "SUB", "MULT", "DIV", "MOD"):
             _, _, line_num = self.current()
-            line_values = [val for _, val, ln in self.content if ln == line_num]
-            raw_line = " ".join(line_values)
-            raise SyntaxError(
-                f"Expected operator at line {line_num}:\n"
-                f"{raw_line}\n"
-                f"Got {token_type}"
+            self.semantic_errors.append(
+                f"Line {line_num}: Expected operator, got {token_type}"
             )
+            self.sync()
+            return
 
         self.match(token_type)
 
@@ -223,20 +241,17 @@ class Parser:
     # parsing function
     def parse(self):
         self.IOL()
+
         if self.current()[0] != "EOF":
-            raise SyntaxError("Extra tokens at end")
-        return "no errors"
+            self.semantic_errors.append("Extra tokens at end")
+
+        # return parser object itself for convenience
+        return self
     
-
-def main():
-    parser = Parser()
-    # parser.print_raw_file()
-    try:
-        result = parser.parse()
-        print(result)
-    except SyntaxError as e:
-        print(e)
-
-
-if __name__ == "__main__":
-    main()
+parser = Parser()
+# parser.print_raw_file()
+parser_output = parser.parse()
+if parser.semantic_errors:
+    print("Errors:", parser.semantic_errors)
+else:
+    print("Parse successful:", parser.result)

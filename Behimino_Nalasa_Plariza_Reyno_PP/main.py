@@ -12,7 +12,7 @@ def main():
     else:
         main_dir = os.path.dirname(os.path.abspath(__file__))
     
-    window = MainWindow(main_dir=main_dir)
+    window = MainWindow(main_dir = main_dir)
     window.show()
     sys.exit(app.exec())
 
