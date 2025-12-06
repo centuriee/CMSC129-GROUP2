@@ -1,5 +1,5 @@
 IOL
-    INT num IS 0 INT res IS 0
+    INT num IS 3 INT res IS 0
     STR msg1 STR msg2 STR msg3
     BEG msg1 BEG msg2
     BEG msg3

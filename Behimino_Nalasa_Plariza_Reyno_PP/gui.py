@@ -82,8 +82,8 @@ class MainWindow(QMainWindow):
             self.editor_splitter.addWidget(self.code_editor) # Adds the code editor to the horizontal split
 
             self.variable_label = QLabel("Potential Detected Variable Table")
-            self.variable_table = QTableWidget(0, 2)
-            self.variable_table.setHorizontalHeaderLabels(["Type", "Name"])
+            self.variable_table = QTableWidget(0, 3)
+            self.variable_table.setHorizontalHeaderLabels(["Type", "Name", "Value"])
             self.variable_table.verticalHeader().setVisible(False)
             self.variable_table.setEditTriggers(QTableWidget.NoEditTriggers)
             self.variable_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)

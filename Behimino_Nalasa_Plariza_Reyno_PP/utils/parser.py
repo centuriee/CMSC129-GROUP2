@@ -1,4 +1,5 @@
 import re, os
+from PySide6.QtWidgets import QLabel, QTableWidget, QTableWidgetItem
 
 class ParserError(Exception):
     """exception raised when a semantic or syntax error occurs."""
@@ -13,13 +14,15 @@ class SyntaxError(Exception):
     pass
 
 class Symbol_Table:
-    def __init__(self, entries = {}):
+    def __init__(self, parser, entries = {}):
+        self.parser = parser
         self.entries = entries
 
     # call to create a new variable
     def create_var(self, name, value, var_type):
         # basically overrides old value, no checking lmao
         self.entries[name] = (var_type, value)
+        self.parser.update_variable_table()
             
     # call to replace variable
     def assign_var(self, name, new_value):
@@ -35,6 +38,7 @@ class Symbol_Table:
                 Exception(f"SEMANTIC ERROR; Cannot assign {new_value} to variable {name} with type {var[0]}")
             else:
                 self.entries[name] = (var[0], new_value)
+        self.parser.update_variable_table()
 
     def get_var_type(self, name):
         var = self.entries.get(name)
@@ -75,7 +79,7 @@ class Parser:
         self.content = self.load_tokens()
         self.pos = 0
         self.semantic_errors = []
-        self.symbol_table = Symbol_Table()
+        self.symbol_table = Symbol_Table(self)
         self.main_window = main_window  # Store reference to GUI
 
         self.result = None
@@ -178,6 +182,10 @@ class Parser:
             self.operation()
         elif token_type == "NEWLN":
             self.match("NEWLN")
+            # newlining
+            if not self.compile_mode:
+                current_text = self.main_window.console_output.toPlainText()
+                self.main_window.console_output.setPlainText(current_text + "\n")
         else:
             _, _, line_num = self.current()
 
@@ -323,11 +331,9 @@ class Parser:
             else:
                 ParserError(f"Line {_}: Unexpected token type intercepted {var_type}")
             
-            # Print to GUI console if available
-            if self.main_window is not None:
-                self.main_window.console_output.append(f"Output: {var}")
-            else:
-                print(var)
+            # add content without newlining
+            current_text = self.main_window.console_output.toPlainText()
+            self.main_window.console_output.setPlainText(current_text + str(var))
 
     # helper functions
     # expr -> IDENT | INT_LIT | operation
@@ -436,3 +442,18 @@ class Parser:
 
         # return parser object itself for convenience
         return self
+    
+    def update_variable_table(self):
+        if self.main_window is None:
+            return  # no GUI, skip
+
+        table = self.main_window.variable_table
+        table.setRowCount(0)  # clear existing rows
+
+        for var_name, (var_type, value) in self.symbol_table.entries.items():
+            row = table.rowCount()
+            table.insertRow(row)
+
+            table.setItem(row, 0, QTableWidgetItem(str(var_type)))
+            table.setItem(row, 1, QTableWidgetItem(str(var_name)))
+            table.setItem(row, 2, QTableWidgetItem(str(value)))

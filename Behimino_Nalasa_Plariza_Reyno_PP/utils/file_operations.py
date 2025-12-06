@@ -9,7 +9,7 @@ def new_file(main_window): # Function for the creation of new file
     main_window.code_editor.clear()
     main_window.console_output.clear()
     main_window.variable_table.clear() # clear all text display area
-    main_window.variable_table.setHorizontalHeaderLabels(["Type", "Name"]) # add headers again
+    main_window.variable_table.setHorizontalHeaderLabels(["Type", "Name", "Value"]) # add headers again
     main_window.setWindowTitle("Lexical Analyzer - New File") 
     main_window.current_file = None  # Removes any reference to a file, new file output is saved when save option is selected
 
@@ -40,7 +40,7 @@ def save_file_as(main_window):
     
 def show_tokenized(main_window):
     main_window.variable_table.clear()
-    main_window.variable_table.setHorizontalHeaderLabels(["Type", "Name"]) # add headers again
+    main_window.variable_table.setHorizontalHeaderLabels(["Type", "Name", "Value"]) # add headers again
     """Process the input text according to specification"""
     input_content = main_window.code_editor.toPlainText().strip()
     if not input_content:
@@ -78,7 +78,7 @@ def show_tokenized(main_window):
 def compile_code(main_window):
     # (1) RUN LEXER
     main_window.variable_table.clear()
-    main_window.variable_table.setHorizontalHeaderLabels(["Type", "Name"]) # add headers again
+    main_window.variable_table.setHorizontalHeaderLabels(["Type", "Name", "Value"]) # add headers again
     main_window.console_output.clear()
 
     """Process the input text according to specification"""
