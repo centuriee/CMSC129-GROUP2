@@ -120,12 +120,14 @@ def compile_code(main_window):
             return False
 
         else:
-            main_window.console_output.append("Lexical analysis successful!")
             # save tokens.tkn
             output_path = os.path.join(main_window.main_dir, "tokens.tkn")
 
             with open(output_path, "w", encoding = "utf-8") as f:
                 f.write(lexer_output)
+            main_window.console_output.append(f"Token stream written to {output_path}")
+
+            main_window.console_output.append("Lexical analysis successful!")
 
 
     except Exception as e:
