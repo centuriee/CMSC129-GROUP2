@@ -61,8 +61,13 @@ class Symbol_Table:
             raise ParserError(f"SEMANTIC ERROR; Variable {name} does not exist.")
 
 class Parser:
-    def __init__(self, filename = "tokens.tkn", main_window = None):
+    def __init__(self, compile_mode, filename = "tokens.tkn", main_window = None, ):
         # create path relative to parser.py
+
+        # value to check if we're in compile mode
+        self.compile_mode = compile_mode
+        # only run certain checks if in execute
+
         current_dir = os.path.dirname(os.path.abspath(__file__))
         self.filename = os.path.join(os.path.dirname(current_dir), filename)
         self.raw_file = self.read_file()
@@ -221,62 +226,64 @@ class Parser:
                 f"Line {line_num}: SEMANTIC ERROR; Variable '{variable_name}' must be declared before using BEG"
             )
 
-        # Get variable type to determine what kind of input to expect
-        var_type = self.symbol_table.get_var_type(variable_name)
+        # ONLY EXECUTE IF NOT IN COMPILE MODE
+        if not self.compile_mode:
+            # Get variable type to determine what kind of input to expect
+            var_type = self.symbol_table.get_var_type(variable_name)
 
-        # Show input dialog if GUI is available
-        if self.main_window is not None:
-            user_input = self.main_window.show_input_dialog(variable_name)
-            
-            if user_input is None:
-                raise ParserError(
-                    f"Line {line_num}: User cancelled input for variable '{variable_name}'"
-                )
-            
-            # Type conversion based on variable type
-            try:
-                if var_type == 'INT_LIT':
-                    value = int(user_input)
-                elif var_type == 'STR':
-                    value = str(user_input)
-                else:
+            # Show input dialog if GUI is available
+            if self.main_window is not None:
+                user_input = self.main_window.show_input_dialog(variable_name)
+                
+                if user_input is None:
                     raise ParserError(
-                        f"Line {line_num}: SEMANTIC ERROR; Unknown variable type '{var_type}'"
+                        f"Line {line_num}: User cancelled input for variable '{variable_name}'"
                     )
                 
-                self.symbol_table.assign_var(variable_name, value)
-                
-                # Log to console
-                if self.main_window is not None:
-                    self.main_window.console_output.append(
-                        f"User input for '{variable_name}': {value}"
-                    )
+                # Type conversion based on variable type
+                try:
+                    if var_type == 'INT_LIT':
+                        value = int(user_input)
+                    elif var_type == 'STR':
+                        value = str(user_input)
+                    else:
+                        raise ParserError(
+                            f"Line {line_num}: SEMANTIC ERROR; Unknown variable type '{var_type}'"
+                        )
                     
-            except ValueError:
-                raise ParserError(
-                    f"Line {line_num}: SEMANTIC ERROR; Invalid input for variable '{variable_name}' of type {var_type}. Expected a valid {var_type} value."
-                )
-        else:
-            # Fallback to console input if no GUI
-            print(f"Enter value for '{variable_name}' ({var_type}): ", end='')
-            user_input = input()
-            
-            try:
-                if var_type == 'INT_LIT':
-                    value = int(user_input)
-                elif var_type == 'STR':
-                    value = str(user_input)
-                else:
+                    self.symbol_table.assign_var(variable_name, value)
+                    
+                    # Log to console
+                    if self.main_window is not None:
+                        self.main_window.console_output.append(
+                            f"User input for '{variable_name}': {value}"
+                        )
+                        
+                except ValueError:
                     raise ParserError(
-                        f"Line {line_num}: SEMANTIC ERROR; Unknown variable type '{var_type}'"
+                        f"Line {line_num}: SEMANTIC ERROR; Invalid input for variable '{variable_name}' of type {var_type}. Expected a valid {var_type} value."
                     )
+            else:
+                # Fallback to console input if no GUI
+                print(f"Enter value for '{variable_name}' ({var_type}): ", end='')
+                user_input = input()
                 
-                self.symbol_table.assign_var(variable_name, value)
-                
-            except ValueError:
-                raise ParserError(
-                    f"Line {line_num}: SEMANTIC ERROR; Invalid input for variable '{variable_name}' of type {var_type}"
-                )
+                try:
+                    if var_type == 'INT_LIT':
+                        value = int(user_input)
+                    elif var_type == 'STR':
+                        value = str(user_input)
+                    else:
+                        raise ParserError(
+                            f"Line {line_num}: SEMANTIC ERROR; Unknown variable type '{var_type}'"
+                        )
+                    
+                    self.symbol_table.assign_var(variable_name, value)
+                    
+                except ValueError:
+                    raise ParserError(
+                        f"Line {line_num}: SEMANTIC ERROR; Invalid input for variable '{variable_name}' of type {var_type}"
+                    )
 
     # INTO -> INTO IDENT IS expr
     def INTO(self):
@@ -292,18 +299,19 @@ class Parser:
         self.match("PRINT")
         var_type, var, _ = self.expr()
 
-        if(var_type == 'IDENT'):
-            var = self.symbol_table.get_var_value(var)
-        elif(var_type == 'INT_LIT'):
-            pass
-        else:
-            ParserError(f"Line {_}: Unexpected token type intercepted {var_type}")
-        
-        # Print to GUI console if available
-        if self.main_window is not None:
-            self.main_window.console_output.append(f"Output: {var}")
-        else:
-            print(var)
+        if not self.compile_mode:
+            if(var_type == 'IDENT'):
+                var = self.symbol_table.get_var_value(var)
+            elif(var_type == 'INT_LIT'):
+                pass
+            else:
+                ParserError(f"Line {_}: Unexpected token type intercepted {var_type}")
+            
+            # Print to GUI console if available
+            if self.main_window is not None:
+                self.main_window.console_output.append(f"Output: {var}")
+            else:
+                print(var)
 
     # helper functions
     # expr -> IDENT | INT_LIT | operation
