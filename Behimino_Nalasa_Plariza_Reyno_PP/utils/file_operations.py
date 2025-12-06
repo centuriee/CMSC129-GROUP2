@@ -2,6 +2,7 @@ import os
 import sys
 from PySide6.QtWidgets import QFileDialog, QMessageBox
 from utils.lexer import Lexer
+from utils.parser import Parser
 
 
 def new_file(main_window): # Function for the creation of new file
@@ -65,19 +66,78 @@ def show_tokenized(main_window):
             output_content += "\n" # newline for clean printing
             #Haskel's line processing comment moved to compile_code function
 
-        if getattr(sys, 'frozen', False):
-            # Running as compiled .exe
-            script_dir = os.path.dirname(sys.executable)
-        else:
-            # Running as normal Python script
-            script_dir = os.path.dirname(os.path.abspath(__file__))
-
         output_path = os.path.join(main_window.main_dir, "tokens.tkn")
-
-        with open(output_path, "w", encoding="utf-8") as f:
+        with open(output_path, "w", encoding = "utf-8") as f:
             f.write(output_content)
 
         QMessageBox.information(main_window, "Success", f"Tokenized output saved to:\n{output_path}")
 
     except Exception as e:
         QMessageBox.critical(main_window, "Processing Error", f"An error occurred while processing:\n{e}")
+
+def compile_code(main_window):
+    # (1) RUN LEXER
+    main_window.variable_table.clear()
+    main_window.variable_table.setHorizontalHeaderLabels(["Type", "Name"]) # add headers again
+    main_window.console_output.clear()
+
+    """Process the input text according to specification"""
+    input_content = main_window.code_editor.toPlainText().strip()
+    if not input_content:
+        QMessageBox.warning(main_window, "Warning", "Please enter some text to process!")
+        return
+
+    try:
+        lines = input_content.split('\n')
+        lexical_errors = []
+        lexer_output = ""
+        
+        for line_no, line in enumerate(lines):
+            print(line)
+            lexer = Lexer(line)
+            token_stream = lexer.tokenize()
+
+            for token in token_stream:
+                if token.name is None:
+                    lexer_output += f"({token.type}, {token.value})"
+                else:
+                    lexer_output += f"({token.type}, {token.name}, {token.value})"
+            
+            lexer_output += "\n" # newline for clean printing
+
+            # lexical error detector
+            if token.type == "ERR_LEX":
+                lexical_errors.append(
+                    f"Line {line_no + 1}: Invalid token '{token.value}'"
+                )
+
+        # lexical error checker
+        if lexical_errors:
+            main_window.console_output.clear()
+            main_window.console_output.append(
+                "Lexical analysis failed:<br>" + "<br>".join(lexical_errors)
+            )
+            return
+        
+        else:
+            main_window.console_output.append("Lexical analysis successful!")
+            # save tokens.tkn
+            output_path = os.path.join(main_window.main_dir, "tokens.tkn")
+
+            with open(output_path, "w", encoding = "utf-8") as f:
+                f.write(lexer_output)
+
+
+    except Exception as e:
+        QMessageBox.critical(main_window, "Processing Error", f"An error occurred while processing:\n{e}")
+
+    # (2) RUN PARSER
+    parser = Parser()
+    # parser.print_raw_file()
+    parser_output = parser.parse()
+    if parser.semantic_errors:
+        main_window.console_output.append("Parsing failed:")
+        for err in parser.semantic_errors:
+            main_window.console_output.append(err)
+    else:
+        main_window.console_output.append("Parsing successful!")

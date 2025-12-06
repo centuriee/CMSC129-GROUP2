@@ -1,13 +1,14 @@
 IOL
-    BEG 1023123
-    VARIABLE_1
-    VARIABLE2
-    VARIABLE3.1
-    3.1 2.1 3-1 12 
-    ADD MULT INT STR INTO IS BEG 
-    PRINT ADD SUB MULT MOD DIV NEWLN
-    0 1 2 3 4 5 6 7 8 9
-    314159265358979323846264
-    3.14159265358979323846264
-    + - / * % ^ & * ( )
+    INT num IS 0 INT res IS 0
+    STR msg1 STR msg2 STR msg3
+    BEG msg1 BEG msg2
+    BEG msg3
+    NEWLN PRINT msg1
+    NEWLN
+    INTO res IS MULT num num
+    PRINT msg2
+    PRINT MULT num 2
+    NEWLN
+    PRINT msg3
+    PRINT res
 LOI
