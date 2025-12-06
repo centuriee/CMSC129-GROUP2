@@ -28,16 +28,23 @@ class Symbol_Table:
     def assign_var(self, name, new_value):
         var = self.entries.get(name)
 
-        # if does not exist, throw error
         if var is None:
             raise ParserError(f"SEMANTIC ERROR; Variable {name} does not exist.")
-        else:
-            python_type = int if var[0] == 'INT_LIT' else str if var[0] == 'STR' else None
-
-            if(type(new_value) != python_type):
-                Exception(f"SEMANTIC ERROR; Cannot assign {new_value} to variable {name} with type {var[0]}")
-            else:
-                self.entries[name] = (var[0], new_value)
+        
+        # determine Python type
+        python_type = int if var[0] == 'INT_LIT' else str if var[0] == 'STR' else None
+        
+        # convert value if needed
+        if python_type == int and not isinstance(new_value, int):
+            try:
+                new_value = int(new_value)
+            except:
+                raise ParserError(f"SEMANTIC ERROR; Cannot assign {new_value} to variable {name} with type {var[0]}")
+        
+        elif python_type == str and not isinstance(new_value, str):
+            new_value = str(new_value)
+        
+        self.entries[name] = (var[0], new_value)
         self.parser.update_variable_table()
 
     def get_var_type(self, name):
@@ -304,19 +311,37 @@ class Parser:
         self.match("INTO")
         _, var_name, _ = self.match("IDENT")
         self.match("IS")
+
+        # evaluate the expression
         value_type, new_value, line_num = self.expr()
 
         if value_type == "IDENT":
-            value_name = new_value
+            # variable checker
+            if self.symbol_table.get_var_type(new_value) is None:
+                raise ParserError(f"Line {line_num}: SEMANTIC ERROR; Variable '{new_value}' does not exist.")
             value_type = self.symbol_table.get_var_type(new_value)
             new_value = self.symbol_table.get_var_value(new_value)
 
-        if self.symbol_table.get_var_type(var_name) != value_type:
-            raise ParserError(f"Line {line_num}: SEMANTIC ERROR; value " \
-                                f"of type {value_type} cannot go into {var_name}"
-                                f"with type {self.symbol_table.get_var_type(var_name)}")
+        # if the variable does not exist yet, create it
+        if var_name not in self.symbol_table.entries:
+            # record type and placeholder value
+            if self.compile_mode:
+                placeholder = 0 if value_type == "INT_LIT" else ""
+                self.symbol_table.create_var(var_name, placeholder, value_type)
+            else:
+                self.symbol_table.create_var(var_name, new_value, value_type)
+        else:
+            # IF variable exists: check type
+            existing_type = self.symbol_table.get_var_type(var_name)
+            if existing_type != value_type:
+                raise ParserError(
+                    f"Line {line_num}: SEMANTIC ERROR; value of type {value_type} "
+                    f"cannot go into {var_name} with type {existing_type}"
+                )
 
-        self.symbol_table.assign_var(var_name, new_value)
+            # assign value only in interpreter mode
+            if not self.compile_mode:
+                self.symbol_table.assign_var(var_name, new_value)
 
     # PRINT -> PRINT expr
     def PRINT(self):
