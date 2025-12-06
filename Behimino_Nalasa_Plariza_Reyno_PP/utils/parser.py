@@ -20,12 +20,12 @@ class Symbol_Table:
 
         # if does not exist, throw error
         if var is None:
-            ParserError(f"Variable {name} does not exist.")
+            raise ParserError(f"SEMANTIC ERROR; Variable {name} does not exist.")
         else:
             python_type = int if var[0] == 'INT_LIT' else str if var[0] == 'STR' else None
 
             if(type(new_value) != python_type):
-                Exception(f"Cannot assign {new_value} to variable {name} with type {var[0]}")
+                Exception(f"SEMANTIC ERROR; Cannot assign {new_value} to variable {name} with type {var[0]}")
             else:
                 self.entries[name] = (var[0], new_value)
 
@@ -35,7 +35,7 @@ class Symbol_Table:
         if var is not None:
             return var[0]
         else:
-            raise ParserError(f"Variable {name} does not exist.")
+            raise ParserError(f"SEMANTIC ERROR; Variable {name} does not exist.")
         
     def get_var_value(self, name):
         var = self.entries.get(name)
@@ -43,7 +43,7 @@ class Symbol_Table:
         if var is not None:
             return var[1]
         else:
-            raise ParserError(f"Variable {name} does not exist.")
+            raise ParserError(f"SEMANTIC ERROR; Variable {name} does not exist.")
         
     def get_var(self, name):
         var = self.entries.get(name)
@@ -51,7 +51,7 @@ class Symbol_Table:
         if var is not None:
             return var
         else:
-            raise ParserError(f"Variable {name} does not exist.")
+            raise ParserError(f"SEMANTIC ERROR; Variable {name} does not exist.")
 
 class Parser:
     def __init__(self, filename = "tokens.tkn"):
@@ -108,7 +108,7 @@ class Parser:
             return self.current()
         else:
             raise ParserError(
-                f"Line {line_num}: Expected {expected_type}, "
+                f"Line {line_num}: SYNTAX ERROR; Expected {expected_type}, "
                 f"got {token_type} (value: {token_val})"
             )
         
@@ -124,7 +124,7 @@ class Parser:
         token_type, _, line_num = self.current()
         if token_type != "IOL":
             raise ParserError(
-                f"Line {line_num}: Program must start with 'IOL', started with {token_type}"
+                f"Line {line_num}: SYNTAX ERROR; Program must start with 'IOL', started with {token_type}"
             )
 
         self.match("IOL")  # consume IOL
@@ -135,7 +135,7 @@ class Parser:
         token_type, _, _ = self.current()
         if token_type != "EOF":
             raise ParserError(
-                f"Line {line_num}: Program must end with 'LOI', ended with {token_type}"
+                f"Line {line_num}: SYNTAX ERROR; Program must end with 'LOI', ended with {token_type}"
             )
 
     # stmts -> stmt stmts | e
@@ -168,7 +168,7 @@ class Parser:
             _, _, line_num = self.current()
 
             raise ParserError(
-                f"Line {line_num}: Unexpected token {token_type}"
+                f"Line {line_num}: SYNTAX ERROR; Unexpected token {token_type}"
             )
 
     """ 
@@ -239,7 +239,7 @@ class Parser:
         else:
             _, _, line_num = self.current()
             raise ParserError(
-                f"Line {line_num}: Expected IDENT, INT_LIT, or OPERATION, got {token_type}"
+                f"Line {line_num}: SYNTAX ERROR; Expected IDENT, INT_LIT, or OPERATION, got {token_type}"
             )
 
     # operation -> (ADD | SUB | MULT | DIV | MOD) number number
@@ -249,7 +249,7 @@ class Parser:
         if token_type not in ("ADD", "SUB", "MULT", "DIV", "MOD"):
             _, _, line_num = self.current()
             raise ParserError(
-                f"Line {line_num}: Expected operator, got {token_type}"
+                f"Line {line_num}: SYNTAX ERROR; Expected operator, got {token_type}"
             )
         elif token_type == "ADD":
             self.match(token_type)
@@ -288,7 +288,7 @@ class Parser:
         self.IOL()
         token_type, _, line_num = self.current()
         if token_type != "EOF":
-            raise ParserError(f"Line {line_num}: Extra tokens at end")
+            raise ParserError(f"Line {line_num}: SYNTAX ERROR; Extra tokens at end")
 
         # return parser object itself for convenience
         return self

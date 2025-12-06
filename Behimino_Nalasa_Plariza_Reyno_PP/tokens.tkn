@@ -1,5 +1,5 @@
 (IOL, IOL)
-(INT, INT)(IDENT, num)(IS, IS)(INT, INT)(IDENT, res)(IS, IS)(INT_LIT, 0)
+(INT, INT)(IDENT, num)(IS, IS)(INT_LIT, 0)(INT, INT)(IDENT, res)(IS, IS)(INT_LIT, 0)
 (STR, STR)(IDENT, msg1)(STR, STR)(IDENT, msg2)(STR, STR)(IDENT, msg3)
 (BEG, BEG)(IDENT, msg1)(BEG, BEG)(IDENT, msg2)
 (BEG, BEG)(IDENT, msg3)
