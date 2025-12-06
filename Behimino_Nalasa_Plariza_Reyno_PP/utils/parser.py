@@ -199,21 +199,25 @@ class Parser:
             self.match("IS")
             _, returned_value, _ = self.expr()
 
-            if type(returned_value) != int:
-                ParserError(f"Value {returned_value} cannot be assigned to \
-                    variable {var_name} of type INT_LIT")
-
-            self.symbol_table.create_var(var_name, returned_value, 'INT_LIT')
+            if not self.compile_mode:
+                if type(returned_value) != int:
+                    ParserError(f"Value {returned_value} cannot be assigned to \
+                        variable {var_name} of type INT_LIT")
+                self.symbol_table.create_var(var_name, returned_value, 'INT_LIT')
+            else:
+                self.symbol_table.create_var(var_name, None, 'INT_LIT')
         else:
-            self.symbol_table.create_var(var_name, 0, 'INT_LIT')
+            self.symbol_table.create_var(var_name, None, 'INT_LIT')
 
     # STR -> STR IDENT
     def STR(self):
         self.match("STR")
-        token_to_create = self.match("IDENT")
+        _, var_name, _ = self.match("IDENT")
 
-        # token type, token val, line num
-        self.symbol_table.create_var(token_to_create[1], "", 'STR')
+        if not self.compile_mode:
+            self.symbol_table.create_var(var_name, "", 'STR')
+        else:
+            self.symbol_table.create_var(var_name, None, 'STR')
 
     # BEG -> BEG IDENT
     def BEG(self):
@@ -342,43 +346,50 @@ class Parser:
             raise ParserError(
                 f"Line {line_num}: SYNTAX ERROR; Expected operator, got {token_type}"
             )
+
+        # match the operator token
+        self.match(token_type)
+
+        if self.compile_mode:
+            self.expr()  # first operand
+            self.expr()  # second operand
+            # compiler can generate AST node here instead of computing
+            return ("INT_LIT", None, None)  # placeholder value for compiler
+
+        token_type_1, var_1, line_num = self.expr()
+        token_type_2, var_2, line_num = self.expr()
+
+        if token_type_1 == "IDENT":
+            if self.symbol_table.get_var_type(var_1) != "INT_LIT":
+                ParserError(f"Line {line_num}: SEMANTIC ERROR; ADD \
+                            works only with variables of type INT_LIT \
+                            got {self.symbol_table.get_var_value(var_1)}")
+            var_1 = self.symbol_table.get_var_value(var_1)
+
+        if token_type_2 == "IDENT":
+            if self.symbol_table.get_var_type(var_2) != "INT_LIT":
+                ParserError(f"Line {line_num}: SEMANTIC ERROR; ADD \
+                            works only with variables of type INT_LIT \
+                            got {self.symbol_table.get_var_value(var_2)}")
+            var_2 = self.symbol_table.get_var_value(var_2)
+
+        var_1 = int(var_1)
+        var_2 = int(var_2)
+
+        if token_type == "ADD":
+            return ("INT_LIT", var_1 + var_2, line_num)
+        elif token_type == "SUB":
+            return ("INT_LIT", var_1 - var_2, line_num)
+        elif token_type == "MULT":
+            return ("INT_LIT", var_1 * var_2, line_num)
+        elif token_type == "DIV":
+            return ("INT_LIT", int(var_1 / var_2), line_num)
+        elif token_type == "MOD":
+            return ("INT_LIT", var_1 % var_2, line_num)
         else:
-            self.match(token_type)
-            token_type_1, var_1, line_num = self.expr()
-            token_type_2, var_2, line_num = self.expr()
+            raise ParserError(f"Line {line_num}: SYNTAX ERROR; Expected \
+                            operator, got {token_type}")
 
-            # preprocess
-            if token_type_1 == "IDENT":
-                if self.symbol_table.get_var_type(var_1) != "INT_LIT":
-                    ParserError(f"Line {line_num}: SEMANTIC ERROR; ADD \
-                                works only with variables of type INT_LIT \
-                                got {self.symbol_table.get_var_value(var_1)}")
-                var_1 = self.symbol_table.get_var_value(var_1)
-
-            if token_type_2 == "IDENT":
-                if self.symbol_table.get_var_type(var_2) != "INT_LIT":
-                    ParserError(f"Line {line_num}: SEMANTIC ERROR; ADD \
-                                works only with variables of type INT_LIT \
-                                got {self.symbol_table.get_var_value(var_2)}")
-                var_2 = self.symbol_table.get_var_value(var_2)
-        
-            var_1 = int(var_1)
-            var_2 = int(var_2)
-            
-            if token_type == "ADD":
-                return ("INT_LIT", var_1 + var_2, line_num)
-            elif token_type == "SUB":
-                return ("INT_LIT", var_1 - var_2, line_num)
-            elif token_type == "MULT":
-                return ("INT_LIT", var_1 * var_2, line_num)
-            elif token_type == "DIV":
-                return ("INT_LIT", int(var_1 / var_2), line_num)
-            elif token_type == "MOD":
-                return ("INT_LIT", var_1 % var_2, line_num)
-            else:
-                raise ParserError(f"Line {line_num}: SYNTAX ERROR; Expected \
-                                  operator, got {token_type}"
-                )
 
 
     """ DEPRECATED FUNC, idk if needed still since meron na ang expr() """
