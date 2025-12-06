@@ -4,6 +4,46 @@ class ParserError(Exception):
     """exception raised when a semantic or syntax error occurs."""
     pass
 
+
+class Symbol_Table:
+    def __init__(self, entries = {}):
+        self.entries = entries
+
+    # call to create a new variable or to assign a value to one
+    def assign_var(self, name, value = None, var_type = None):
+        var = self.entries.get(name)
+
+        # if does not exist, create
+        if var is None:
+            self.entries[name] = (var_type, value)
+        else:
+            # if does exist, do some typechecking
+
+
+    def get_var_type(self, name):
+        var = self.entries.get(name)
+
+        if var is not None:
+            return var[0]
+        else:
+            raise ParserError(f"Variable {name} does not exist.")
+        
+    def get_var_value(self, name):
+        var = self.entries.get(name)
+
+        if var is not None:
+            return var[1]
+        else:
+            raise ParserError(f"Variable {name} does not exist.")
+        
+    def get_var(self, name):
+        var = self.entries.get(name)
+
+        if var is not None:
+            return var
+        else:
+            raise ParserError(f"Variable {name} does not exist.")
+
 class Parser:
     def __init__(self, filename = "tokens.tkn"):
         # create path relative to parser.py
@@ -14,6 +54,8 @@ class Parser:
         self.content = self.load_tokens()
         self.pos = 0
         self.semantic_errors = []
+
+        self.symbol_table []
 
         self.result = None
         try:
