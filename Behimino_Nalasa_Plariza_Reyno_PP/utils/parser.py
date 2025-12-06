@@ -4,6 +4,13 @@ class ParserError(Exception):
     """exception raised when a semantic or syntax error occurs."""
     pass
 
+class SemanticError(Exception):
+    """Exception raised when a semantic error occurs"""
+    pass
+
+class SyntaxError(Exception):
+    """Excpetion raised when a syntax error occurs"""
+    pass
 
 class Symbol_Table:
     def __init__(self, entries = {}):
@@ -104,8 +111,9 @@ class Parser:
     def match(self, expected_type):
         token_type, token_val, line_num = self.current()
         if token_type == expected_type:
+            tkn_to_return = self.current()
             self.pos += 1
-            return self.current()
+            return tkn_to_return
         else:
             raise ParserError(
                 f"Line {line_num}: SYNTAX ERROR; Expected {expected_type}, "
@@ -178,7 +186,7 @@ class Parser:
     # INT -> INT IDENT IS NUMBER
     def INT(self):
         self.match("INT")
-        var_name = self.match("IDENT")
+        _, var_name, _ = self.match("IDENT")
 
         next_token = self.current()
         if next_token[0] == "IS":
@@ -186,10 +194,10 @@ class Parser:
             _, returned_value, _ = self.expr()
 
             if type(returned_value) != int:
-                Exception(f"Value {returned_value} cannot be assigned to \
+                ParserError(f"Value {returned_value} cannot be assigned to \
                     variable {var_name} of type INT_LIT")
 
-            self.symbol_table.create_var(var_name[1], returned_value[1], 'INT_LIT')
+            self.symbol_table.create_var(var_name, returned_value, 'INT_LIT')
         else:
             self.symbol_table.create_var(var_name[1], 0, 'INT_LIT')
 
@@ -220,7 +228,15 @@ class Parser:
     # PRINT -> PRINT expr
     def PRINT(self):
         self.match("PRINT")
-        self.expr()
+        var_type, var, _ = self.expr()
+
+        if(var_type == 'IDENT'):
+            var = self.symbol_table.get_var_value(var)
+        elif(var_type == 'INT_LIT'):
+            pass
+        else:
+            ParserError(f"Line {_}: Unexpected token type intercepted {var_type}")
+        print(var)
 
     # helper functions
     # expr -> IDENT | INT_LIT | operation
@@ -251,13 +267,43 @@ class Parser:
             raise ParserError(
                 f"Line {line_num}: SYNTAX ERROR; Expected operator, got {token_type}"
             )
-        elif token_type == "ADD":
+        else:
             self.match(token_type)
-            _, var_1, line_num = self.expr()
-            _, var_2, line_num = self.expr()
+            token_type_1, var_1, line_num = self.expr()
+            token_type_2, var_2, line_num = self.expr()
 
+            # preprocess
+            if token_type_1 == "IDENT":
+                if self.symbol_table.get_var_type(var_1) != "INT_LIT":
+                    ParserError(f"Line {line_num}: SEMANTIC ERROR; ADD \
+                                works only with variables of type INT_LIT \
+                                got {self.symbol_table.get_var_value(var_1)}")
+                var_1 = self.symbol_table.get_var_value(var_1)
+
+            if token_type_2 == "IDENT":
+                if self.symbol_table.get_var_type(var_2) != "INT_LIT":
+                    ParserError(f"Line {line_num}: SEMANTIC ERROR; ADD \
+                                works only with variables of type INT_LIT \
+                                got {self.symbol_table.get_var_value(var_2)}")
+                var_2 = self.symbol_table.get_var_value(var_2)
+        
+            var_1 = int(var_1)
+            var_2 = int(var_2)
             
-            return ("INT_LIT")
+            if token_type == "ADD":
+                return ("INT_LIT", var_1 + var_2, line_num)
+            elif token_type == "SUB":
+                return ("INT_LIT", var_1 - var_2, line_num)
+            elif token_type == "MULT":
+                return ("INT_LIT", var_1 * var_2, line_num)
+            elif token_type == "DIV":
+                return ("INT_LIT", int(var_1 / var_2), line_num)
+            elif token_type == "MOD":
+                return ("INT_LIT", var_1 % var_2, line_num)
+            else:
+                raise ParserError(f"Line {line_num}: SYNTAX ERROR; Expected \
+                                  operator, got {token_type}"
+                )
 
 
     """ DEPRECATED FUNC, idk if needed still since meron na ang expr() """

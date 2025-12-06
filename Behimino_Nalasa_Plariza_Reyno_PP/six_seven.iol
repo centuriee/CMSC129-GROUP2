@@ -1,0 +1,4 @@
+IOL
+INT a IS 67
+PRINT ADD 6 7
+LOI
