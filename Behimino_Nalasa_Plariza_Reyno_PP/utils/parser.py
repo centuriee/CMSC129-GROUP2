@@ -86,7 +86,7 @@ class Parser:
         self.content = self.load_tokens()
         self.pos = 0
         self.semantic_errors = []
-        self.symbol_table = Symbol_Table(self)
+        self.symbol_table = Symbol_Table(self, {})
         self.main_window = main_window  # Store reference to GUI
 
         self.result = None
