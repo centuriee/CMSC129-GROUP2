@@ -1,5 +1,9 @@
 import re, os
 
+class ParserError(Exception):
+    """exception raised when a semantic or syntax error occurs."""
+    pass
+
 class Parser:
     def __init__(self, filename = "tokens.tkn"):
         # create path relative to parser.py
@@ -14,18 +18,13 @@ class Parser:
         self.result = None
         try:
             self.result = self.parse()
-        except Exception as e:
+        except ParserError as e:
             self.semantic_errors.append(str(e))
 
     # file reading
     def read_file(self):
-        try:
-            with open(self.filename, 'r') as file:
-                return file.read()
-        except FileNotFoundError:
-            print(f"Error: File '{self.filename}' not found.")
-        except Exception as e:
-            print(f"Error reading file: {e}")
+        with open(self.filename, 'r') as file:
+            return file.read()
 
     # token loading
     def load_tokens(self):
@@ -50,30 +49,17 @@ class Parser:
     def current(self):
         if self.pos < len(self.content):
             return self.content[self.pos]
-        return ("EOF", "EOF", -1)
+        return ("EOF", "EOF", len(self.lines))
 
     def match(self, expected_type):
-        token_type, _, line_num = self.current()
+        token_type, token_val, line_num = self.current()
         if token_type == expected_type:
             self.pos += 1
-            return
         else:
-            self.semantic_errors.append(
-                f"Line {line_num}: Expected {expected_type}, got {token_type}"
+            raise ParserError(
+                f"Line {line_num}: Expected {expected_type}, "
+                f"got {token_type} (value: {token_val})"
             )
-            self.sync()
-            return
-    
-    # panic mode recovery
-    def sync(self):
-        safe_tokens = {"INT", "STR", "BEG", "INTO", "PRINT", "NEWLN", "LOI", "EOF"}
-
-        while self.pos < len(self.content):
-            token_type, _, _ = self.current()
-            print(token_type)
-            if token_type in safe_tokens:
-                return
-            self.pos += 1  # always advance
         
 
     # GRAMMAR
@@ -86,11 +72,9 @@ class Parser:
         # ensures program starts with IOL
         token_type, _, line_num = self.current()
         if token_type != "IOL":
-            self.semantic_errors.append(
+            raise ParserError(
                 f"Line {line_num}: Program must start with 'IOL', started with {token_type}"
             )
-            self.sync()
-            return
 
         self.match("IOL")  # consume IOL
         self.stmts()       # parse statements
@@ -99,11 +83,9 @@ class Parser:
         # ensure program ends with EOF
         token_type, _, _ = self.current()
         if token_type != "EOF":
-            self.semantic_errors.append(
+            raise ParserError(
                 f"Line {line_num}: Program must end with 'LOI', ended with {token_type}"
             )
-            self.sync()
-            return
 
     # stmts -> stmt stmts | e
     def stmts(self):
@@ -134,11 +116,9 @@ class Parser:
         else:
             _, _, line_num = self.current()
 
-            self.semantic_errors.append(
+            raise ParserError(
                 f"Line {line_num}: Unexpected token {token_type}"
             )
-            self.sync()
-            return
 
     """ 
         changed last statement from number to expr. main issue with this is type compatibility
@@ -176,7 +156,7 @@ class Parser:
     # helper functions
     # expr -> IDENT | INT_LIT | operation
     def expr(self):
-        token_type, _ = self.current()
+        token_type, _, _ = self.current()
 
         if token_type == "IDENT":
             self.match("IDENT")
@@ -189,23 +169,19 @@ class Parser:
 
         else:
             _, _, line_num = self.current()
-            self.semantic_errors.append(
+            raise ParserError(
                 f"Line {line_num}: Expected IDENT, INT_LIT, or OPERATION, got {token_type}"
             )
-            self.sync()
-            return
 
     # operation -> (ADD | SUB | MULT | DIV | MOD) number number
     def operation(self):
-        token_type, _ = self.current()
+        token_type, _, _ = self.current()
 
         if token_type not in ("ADD", "SUB", "MULT", "DIV", "MOD"):
             _, _, line_num = self.current()
-            self.semantic_errors.append(
+            raise ParserError(
                 f"Line {line_num}: Expected operator, got {token_type}"
             )
-            self.sync()
-            return
 
         self.match(token_type)
 
@@ -241,17 +217,9 @@ class Parser:
     # parsing function
     def parse(self):
         self.IOL()
-
-        if self.current()[0] != "EOF":
-            self.semantic_errors.append("Extra tokens at end")
+        token_type, _, line_num = self.current()
+        if token_type != "EOF":
+            raise ParserError(f"Line {line_num}: Extra tokens at end")
 
         # return parser object itself for convenience
         return self
-    
-parser = Parser()
-# parser.print_raw_file()
-parser_output = parser.parse()
-if parser.semantic_errors:
-    print("Errors:", parser.semantic_errors)
-else:
-    print("Parse successful:", parser.result)

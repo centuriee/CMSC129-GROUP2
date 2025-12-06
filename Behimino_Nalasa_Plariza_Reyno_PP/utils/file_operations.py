@@ -133,8 +133,6 @@ def compile_code(main_window):
 
     # (2) RUN PARSER
     parser = Parser()
-    # parser.print_raw_file()
-    parser_output = parser.parse()
     if parser.semantic_errors:
         main_window.console_output.append("Parsing failed:")
         for err in parser.semantic_errors:

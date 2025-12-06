@@ -1,2 +1,3 @@
 (IOL, IOL)
-(IOL, IOL)
+(BEG, BEG)(IDENT, var1)(BEG, BEG)(IDENT, var2)
+(LOI, LOI)
