@@ -2,5 +2,4 @@
 (INT, INT)(IDENT, num)(IS, IS)(INT_LIT, 6)
 (INT, INT)(IDENT, num2)
 (INTO, INTO)(IDENT, num2)(IS, IS)(IDENT, num)
-(PRINT, PRINT)(IDENT, num2)
 (LOI, LOI)
